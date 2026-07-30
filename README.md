@@ -70,7 +70,29 @@ training or evaluation ever re-runs the image encoder.
 
 ## Running one experiment
 
-_To be completed in Task 9 / Task 11._
+**Linear probe** (trains `W, b` on cached features, selects the best epoch by validation
+accuracy, evaluates test accuracy once at the end):
+
+```bash
+python scripts/run_linear_probe.py --dataset dtd --encoder resnet18 --k-shot 10 --seed 0
+python scripts/run_linear_probe.py --dataset dtd --encoder resnet18 --k-shot full --seed 0
+```
+
+`--k-shot` is `5`, `10`, or `full`. For `5`/`10`, `--seed` (0, 1, or 2) selects both the
+balanced training subset and the classifier's initialization/shuffling. For `full`, it
+selects only the classifier's initialization. Outputs (config, per-epoch history, result,
+checkpoint) are saved under `outputs/linear_probe/<dataset>/<encoder>/k<k>/seed<seed>/`.
+
+**Image-derived prototypes** (no training — builds prototypes from cached features and
+classifies by cosine similarity):
+
+```bash
+python scripts/run_prototype.py --dataset dtd --encoder resnet18 --k-shot 10 --seed 0
+python scripts/run_prototype.py --dataset dtd --encoder resnet18 --k-shot full
+```
+
+`--seed` is required for `5`/`10` (selects the subset) and omitted for `full` (single run,
+no subset to select). Outputs are saved under `outputs/prototype/<dataset>/<encoder>/k<k>/`.
 
 ## Running all experiments
 
