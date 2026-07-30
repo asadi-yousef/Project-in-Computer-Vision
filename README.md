@@ -42,7 +42,17 @@ pip install -r requirements.txt
 
 ## Dataset preparation
 
-_To be completed in Task 3._
+Datasets are loaded through torchvision's official train/val/test splits (`src/data/datasets.py`)
+and downloaded automatically on first use into `data/`:
+
+```bash
+python scripts/verify_dataset_splits.py --dataset dtd --data-dir data --download
+python scripts/verify_dataset_splits.py --dataset flowers102 --data-dir data --download
+```
+
+Each run prints split sizes and checks them against the documented official protocol
+(DTD partition 1: 1880/1880/1880; Flowers-102: 1020/1020/6149), and asserts there is no
+image overlap between splits. Omit `--download` on subsequent runs once the data is present.
 
 ## Feature extraction
 
