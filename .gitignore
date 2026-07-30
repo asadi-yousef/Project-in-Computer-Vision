@@ -7,6 +7,7 @@ __pycache__/
 venv/
 env/
 .pytest_cache/
+.pytest_tmp/
 
 # Datasets, feature cache, experiment outputs (regenerable / large)
 data/*

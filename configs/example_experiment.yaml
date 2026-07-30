@@ -1,0 +1,17 @@
+# Example experiment config showing the full schema (src/utils/config.py).
+# Copy and edit this file per run; it is not read automatically by anything.
+dataset: dtd
+encoder: resnet18
+method: linear_probe
+k_shot: 10
+seed: 0
+paths:
+  data_dir: data
+  cache_dir: cache
+  output_dir: outputs
+linear_probe:
+  optimizer: adamw
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  batch_size: 64
+  max_epochs: 200
