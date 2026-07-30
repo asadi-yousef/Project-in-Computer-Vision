@@ -56,7 +56,17 @@ image overlap between splits. Omit `--download` on subsequent runs once the data
 
 ## Feature extraction
 
-_To be completed in Task 6._
+Frozen encoders are run once per (dataset, encoder, split) and cached under `cache/`:
+
+```bash
+python scripts/extract_features.py --dataset dtd --encoder resnet18
+python scripts/extract_features.py --dataset dtd --encoder dinov2_vits14
+python scripts/extract_features.py --dataset flowers102 --encoder resnet18
+```
+
+Each cache file (`cache/<dataset>/<encoder>/<split>.pt`) stores features, labels, and
+metadata (feature dim, sample/class counts) used to validate the cache later. No classifier
+training or evaluation ever re-runs the image encoder.
 
 ## Running one experiment
 
