@@ -1,0 +1,248 @@
+[
+  {
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "method": "linear_probe",
+    "k_shot": 5,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.630141814549764,
+    "std_test_accuracy": 0.002677230934316165,
+    "seed_accuracies": {
+      "0": 0.6329786777496338,
+      "1": 0.6276595592498779,
+      "2": 0.6297872066497803
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "method": "linear_probe",
+    "k_shot": 10,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.6858155926068624,
+    "std_test_accuracy": 0.007984616136053486,
+    "seed_accuracies": {
+      "0": 0.686170220375061,
+      "1": 0.6936169862747192,
+      "2": 0.6776595711708069
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "method": "linear_probe",
+    "k_shot": "full",
+    "num_runs": 3,
+    "mean_test_accuracy": 0.7634751598040262,
+    "std_test_accuracy": 0.007221788611707253,
+    "seed_accuracies": {
+      "0": 0.7595744729042053,
+      "1": 0.7718085050582886,
+      "2": 0.759042501449585
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "method": "prototype",
+    "k_shot": 5,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.6432624061902364,
+    "std_test_accuracy": 0.0030246120056124505,
+    "seed_accuracies": {
+      "0": 0.6441489458084106,
+      "1": 0.6398935914039612,
+      "2": 0.6457446813583374
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "method": "prototype",
+    "k_shot": 10,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.6845744649569193,
+    "std_test_accuracy": 0.010148300038708901,
+    "seed_accuracies": {
+      "0": 0.6792553067207336,
+      "1": 0.6962766051292419,
+      "2": 0.6781914830207825
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "method": "prototype",
+    "k_shot": "full",
+    "num_runs": 1,
+    "mean_test_accuracy": 0.7228723168373108,
+    "std_test_accuracy": null,
+    "seed_accuracies": {
+      "2": 0.7228723168373108
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "resnet18",
+    "method": "linear_probe",
+    "k_shot": 5,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.45797871549924213,
+    "std_test_accuracy": 0.007503585453620203,
+    "seed_accuracies": {
+      "0": 0.4648936092853546,
+      "1": 0.4590425491333008,
+      "2": 0.44999998807907104
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "resnet18",
+    "method": "linear_probe",
+    "k_shot": 10,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.5239361723264059,
+    "std_test_accuracy": 0.00744679995945684,
+    "seed_accuracies": {
+      "0": 0.5207446813583374,
+      "1": 0.5186170339584351,
+      "2": 0.5324468016624451
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "resnet18",
+    "method": "linear_probe",
+    "k_shot": "full",
+    "num_runs": 3,
+    "mean_test_accuracy": 0.6255318721135458,
+    "std_test_accuracy": 0.005074150019354451,
+    "seed_accuracies": {
+      "0": 0.631382942199707,
+      "1": 0.6223403811454773,
+      "2": 0.6228722929954529
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "resnet18",
+    "method": "prototype",
+    "k_shot": 5,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.46932623783747357,
+    "std_test_accuracy": 0.0032062420496022682,
+    "seed_accuracies": {
+      "0": 0.4723404347896576,
+      "1": 0.4659574329853058,
+      "2": 0.4696808457374573
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "resnet18",
+    "method": "prototype",
+    "k_shot": 10,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.5196808377901713,
+    "std_test_accuracy": 0.005398347989213754,
+    "seed_accuracies": {
+      "0": 0.51382976770401,
+      "1": 0.5207446813583374,
+      "2": 0.5244680643081665
+    }
+  },
+  {
+    "dataset": "dtd",
+    "encoder": "resnet18",
+    "method": "prototype",
+    "k_shot": "full",
+    "num_runs": 1,
+    "mean_test_accuracy": 0.5877659320831299,
+    "std_test_accuracy": null,
+    "seed_accuracies": {
+      "0": 0.5877659320831299
+    }
+  },
+  {
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "method": "linear_probe",
+    "k_shot": 5,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.7512875000635783,
+    "std_test_accuracy": 0.00219597920297267,
+    "seed_accuracies": {
+      "0": 0.7534558773040771,
+      "1": 0.7490649223327637,
+      "2": 0.751341700553894
+    }
+  },
+  {
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "method": "linear_probe",
+    "k_shot": 10,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.8321678241093954,
+    "std_test_accuracy": 0.0014177523848807202,
+    "seed_accuracies": {
+      "0": 0.832818329334259,
+      "1": 0.8331435918807983,
+      "2": 0.8305415511131287
+    }
+  },
+  {
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "method": "linear_probe",
+    "k_shot": "full",
+    "num_runs": 3,
+    "mean_test_accuracy": 0.8321678241093954,
+    "std_test_accuracy": 0.0014177523848807202,
+    "seed_accuracies": {
+      "0": 0.832818329334259,
+      "1": 0.8331435918807983,
+      "2": 0.8305415511131287
+    }
+  },
+  {
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "method": "prototype",
+    "k_shot": 5,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.6961565613746643,
+    "std_test_accuracy": 0.0032294528272091717,
+    "seed_accuracies": {
+      "0": 0.6924703121185303,
+      "1": 0.6975117921829224,
+      "2": 0.6984875798225403
+    }
+  },
+  {
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "method": "prototype",
+    "k_shot": 10,
+    "num_runs": 3,
+    "mean_test_accuracy": 0.7521548271179199,
+    "std_test_accuracy": 0.0,
+    "seed_accuracies": {
+      "0": 0.7521548271179199,
+      "1": 0.7521548271179199,
+      "2": 0.7521548271179199
+    }
+  },
+  {
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "method": "prototype",
+    "k_shot": "full",
+    "num_runs": 1,
+    "mean_test_accuracy": 0.7521548271179199,
+    "std_test_accuracy": null,
+    "seed_accuracies": {
+      "0": 0.7521548271179199
+    }
+  }
+]

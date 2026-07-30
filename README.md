@@ -100,7 +100,20 @@ _To be completed in Task 18._
 
 ## Regenerating tables and plots
 
-_To be completed in Tasks 13–17._
+Once you've run experiments (see above), aggregate and visualize the results:
+
+```bash
+python scripts/generate_report.py
+```
+
+This reads every `result.json` under `outputs/`, computes mean and sample standard deviation
+of test accuracy per (dataset, encoder, method, k-shot) setting, saves the aggregated numbers
+to `reports/summary.{json,csv}`, generates one accuracy-vs-training-size plot per
+(dataset, encoder) pair under `reports/figures/`, and writes it all into `RESULTS.md` at the
+project root. Re-run it any time after new experiments to refresh `RESULTS.md`.
+
+Training/validation loss curves, confusion matrices, and feature-space visualizations are not
+yet implemented (planned).
 
 ## Output directory structure
 
