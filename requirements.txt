@@ -1,0 +1,16 @@
+# Core deep learning
+torch>=2.2
+torchvision>=0.17
+
+# Numerics and classical ML utilities (PCA / t-SNE for feature visualization)
+numpy
+scikit-learn
+
+# Plotting
+matplotlib
+
+# Config files
+pyyaml
+
+# Testing
+pytest

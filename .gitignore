@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Datasets, feature cache, experiment outputs (regenerable / large)
+data/*
+!data/.gitkeep
+cache/*
+!cache/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
