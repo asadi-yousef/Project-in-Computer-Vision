@@ -9,6 +9,9 @@ scikit-learn
 # Plotting
 matplotlib
 
+# PDF report generation
+reportlab
+
 # Config files
 pyyaml
 

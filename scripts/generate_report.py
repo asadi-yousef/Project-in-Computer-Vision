@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.evaluation.aggregation import aggregate_results, load_all_results
+from src.evaluation.pdf_report import generate_pdf_report
 from src.evaluation.tables import format_accuracy_table
 from src.visualization.accuracy_vs_shot import plot_accuracy_vs_shot
 
@@ -37,11 +38,11 @@ def main() -> None:
     table_markdown = format_accuracy_table(summaries)
 
     dataset_encoder_pairs = sorted({(s["dataset"], s["encoder"]) for s in summaries})
-    figure_relative_paths = []
+    figure_paths = []  # (dataset, encoder, absolute_path) - for the PDF
     for dataset, encoder in dataset_encoder_pairs:
         figure_path = figures_dir / f"accuracy_vs_shot_{dataset}_{encoder}.png"
         plot_accuracy_vs_shot(summaries, dataset, encoder, figure_path)
-        figure_relative_paths.append((dataset, encoder, figure_path.relative_to(PROJECT_ROOT)))
+        figure_paths.append((dataset, encoder, figure_path))
         print(f"Saved {figure_path}")
 
     report_lines = [
@@ -52,7 +53,8 @@ def main() -> None:
         table_markdown,
         "## Accuracy vs. training-set size\n",
     ]
-    for dataset, encoder, relative_path in figure_relative_paths:
+    for dataset, encoder, figure_path in figure_paths:
+        relative_path = figure_path.relative_to(PROJECT_ROOT)
         report_lines.append(f"### {dataset} / {encoder}\n")
         report_lines.append(f"![{dataset} {encoder} accuracy vs shot]({relative_path.as_posix()})\n")
 
@@ -60,6 +62,10 @@ def main() -> None:
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(report_lines))
     print(f"Saved report to {report_path}")
+
+    pdf_path = PROJECT_ROOT / "RESULTS.pdf"
+    generate_pdf_report(summaries, figure_paths, pdf_path)
+    print(f"Saved report to {pdf_path}")
 
 
 if __name__ == "__main__":
