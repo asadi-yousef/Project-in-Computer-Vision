@@ -111,6 +111,14 @@ def project_features_and_prototypes(
     than fitting on samples and separately projecting prototypes, ensures
     both live in the same 2D coordinate system, per stage_1.pdf.
 
+    Both inputs are L2-normalized first. Prototypes are already unit-norm by
+    construction, but raw encoder features are not (ResNet-18 features on
+    DTD, for example, have norms ranging roughly 11-54) - without
+    normalizing the samples too, t-SNE's distance computation is dominated
+    by that scale mismatch and every prototype collapses into one corner
+    regardless of direction. Normalizing both projects them into the same
+    space the prototype classifier itself operates in (cosine similarity).
+
     Args:
         sample_features: (N, D) test-image features to plot.
         prototype_features: (C, D) class prototype features to plot.
@@ -119,7 +127,9 @@ def project_features_and_prototypes(
     Returns:
         (sample_2d, prototype_2d): (N, 2) and (C, 2) arrays.
     """
-    combined = torch.cat([sample_features, prototype_features], dim=0).numpy()
+    normalized_samples = torch.nn.functional.normalize(sample_features, dim=1)
+    normalized_prototypes = torch.nn.functional.normalize(prototype_features, dim=1)
+    combined = torch.cat([normalized_samples, normalized_prototypes], dim=0).numpy()
     num_samples = sample_features.shape[0]
 
     # Perplexity must be less than the number of points being embedded.

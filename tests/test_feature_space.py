@@ -68,6 +68,40 @@ def test_project_features_and_prototypes_returns_correct_shapes():
     assert prototype_2d.shape == (3, 2)
 
 
+def test_project_features_and_prototypes_normalizes_before_projecting():
+    # Two orthogonal prototypes (unit norm by construction); "image"
+    # features pointing in the same directions but with a huge norm -
+    # reproducing the real scale mismatch (raw ResNet-18 features can have
+    # norms ~50x a prototype's). Without normalizing samples first, t-SNE's
+    # distance computation is dominated by norm rather than direction, and
+    # both prototypes would collapse together regardless of class.
+    torch.manual_seed(0)
+    dim = 8
+    prototype_features = torch.zeros(2, dim)
+    prototype_features[0, 0] = 1.0
+    prototype_features[1, 1] = 1.0
+
+    noise = torch.randn(8, dim) * 0.01
+    class_0_samples = prototype_features[0].unsqueeze(0).repeat(4, 1) * 50.0 + noise[:4]
+    class_1_samples = prototype_features[1].unsqueeze(0).repeat(4, 1) * 50.0 + noise[4:]
+    sample_features = torch.cat([class_0_samples, class_1_samples], dim=0)
+
+    sample_2d, prototype_2d = project_features_and_prototypes(
+        sample_features, prototype_features, seed=0
+    )
+
+    class_0_center = sample_2d[:4].mean(axis=0)
+    class_1_center = sample_2d[4:].mean(axis=0)
+
+    dist_0_to_proto0 = ((class_0_center - prototype_2d[0]) ** 2).sum()
+    dist_0_to_proto1 = ((class_0_center - prototype_2d[1]) ** 2).sum()
+    dist_1_to_proto0 = ((class_1_center - prototype_2d[0]) ** 2).sum()
+    dist_1_to_proto1 = ((class_1_center - prototype_2d[1]) ** 2).sum()
+
+    assert dist_0_to_proto0 < dist_0_to_proto1
+    assert dist_1_to_proto1 < dist_1_to_proto0
+
+
 def test_plot_feature_space_is_saved_to_disk(tmp_path):
     sample_2d = torch.randn(12, 2).numpy()
     sample_class_ids = [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]
