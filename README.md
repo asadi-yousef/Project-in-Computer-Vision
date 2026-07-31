@@ -113,10 +113,14 @@ to `reports/summary.{json,csv}`, generates one accuracy-vs-training-size plot pe
 `RESULTS.pdf` at the project root. Re-run it any time after new experiments to refresh both.
 
 It also plots training/validation loss (representative 10-shot, seed-0 run) for each
-dataset/encoder pair used with the linear probe, and a row-normalized confusion matrix per
-dataset (representative setting: full training data, linear probe, seed 0). No re-training
-occurs for confusion matrices - predictions are recomputed from the saved checkpoint.
-Feature-space visualizations are not yet implemented (planned).
+dataset/encoder pair used with the linear probe, a row-normalized confusion matrix per
+dataset (representative setting: full training data, linear probe, seed 0), and a t-SNE
+feature-space plot per (dataset, encoder) pair. No re-training occurs for confusion matrices
+or feature-space plots - both are recomputed from saved checkpoints/cached features.
+
+Feature-space plots reuse the same 10 classes and 150 test samples per dataset across every
+encoder trained on it (selection stored in `reports/feature_viz_selection_<dataset>.json` for
+reproducibility, generated once and reused on every re-run).
 
 ## Output directory structure
 
