@@ -167,9 +167,27 @@ def evaluate_linear_probe(
     checkpoint, after model selection is finalized: stage_1.pdf requires
     that test accuracy never influence epoch or hyperparameter selection.
     """
+    predictions = predict_linear_probe(state_dict, feature_dim, num_classes, test_features, device)
+    return (predictions.to(device) == test_labels.to(device)).float().mean().item()
+
+
+def predict_linear_probe(
+    state_dict: Dict[str, torch.Tensor],
+    feature_dim: int,
+    num_classes: int,
+    features: torch.Tensor,
+    device: torch.device,
+) -> torch.Tensor:
+    """Load a trained linear-probe checkpoint and return its predicted labels.
+
+    Used both by evaluate_linear_probe (test accuracy) and by confusion-matrix
+    generation, which needs the raw predictions rather than just an accuracy
+    scalar. This never re-trains anything - it's a single forward pass over
+    an already-trained checkpoint.
+    """
     model = LinearProbe(feature_dim, num_classes).to(device)
     model.load_state_dict(state_dict)
     model.eval()
     with torch.no_grad():
-        logits = model(test_features.to(device))
-        return _accuracy(logits, test_labels.to(device))
+        logits = model(features.to(device))
+        return logits.argmax(dim=1).cpu()

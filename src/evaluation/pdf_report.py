@@ -37,16 +37,19 @@ def generate_pdf_report(
     figure_paths: List[Tuple[str, str, Union[str, Path]]],
     save_path: Union[str, Path],
     loss_curve_figure_paths: List[Tuple[str, str, Union[str, Path]]] = None,
+    confusion_matrix_figure_paths: List[Tuple[str, str, Union[str, Path]]] = None,
 ) -> None:
     """Build a single-file PDF report: accuracy table, accuracy-vs-shot
-    plots, and (optionally) loss-curve plots.
+    plots, and (optionally) loss-curve and confusion-matrix plots.
 
     Args:
         summaries: aggregated results from aggregation.aggregate_results().
         figure_paths: (dataset, encoder, png_path) tuples, accuracy-vs-shot plots.
         save_path: where to save the PDF.
         loss_curve_figure_paths: (dataset, encoder, png_path) tuples, loss-curve
-            plots; omitted entirely from the PDF if not provided.
+            plots; section omitted entirely if not provided.
+        confusion_matrix_figure_paths: (dataset, encoder, png_path) tuples,
+            confusion-matrix plots; section omitted entirely if not provided.
     """
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -85,6 +88,9 @@ def generate_pdf_report(
     _add_figure_section(story, styles, "Accuracy vs. training-set size", figure_paths)
     _add_figure_section(
         story, styles, "Training / validation loss (10-shot, seed 0)", loss_curve_figure_paths or []
+    )
+    _add_figure_section(
+        story, styles, "Confusion matrices (row-normalized)", confusion_matrix_figure_paths or []
     )
 
     SimpleDocTemplate(str(save_path), pagesize=letter).build(story)

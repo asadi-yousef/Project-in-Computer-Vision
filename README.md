@@ -113,8 +113,10 @@ to `reports/summary.{json,csv}`, generates one accuracy-vs-training-size plot pe
 `RESULTS.pdf` at the project root. Re-run it any time after new experiments to refresh both.
 
 It also plots training/validation loss (representative 10-shot, seed-0 run) for each
-dataset/encoder pair used with the linear probe. Confusion matrices and feature-space
-visualizations are not yet implemented (planned).
+dataset/encoder pair used with the linear probe, and a row-normalized confusion matrix per
+dataset (representative setting: full training data, linear probe, seed 0). No re-training
+occurs for confusion matrices - predictions are recomputed from the saved checkpoint.
+Feature-space visualizations are not yet implemented (planned).
 
 ## Output directory structure
 
