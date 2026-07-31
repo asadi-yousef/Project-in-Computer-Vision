@@ -112,8 +112,9 @@ to `reports/summary.{json,csv}`, generates one accuracy-vs-training-size plot pe
 (dataset, encoder) pair under `reports/figures/`, and writes it all into both `RESULTS.md` and
 `RESULTS.pdf` at the project root. Re-run it any time after new experiments to refresh both.
 
-Training/validation loss curves, confusion matrices, and feature-space visualizations are not
-yet implemented (planned).
+It also plots training/validation loss (representative 10-shot, seed-0 run) for each
+dataset/encoder pair used with the linear probe. Confusion matrices and feature-space
+visualizations are not yet implemented (planned).
 
 ## Output directory structure
 

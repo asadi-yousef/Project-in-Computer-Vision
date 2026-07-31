@@ -22,18 +22,31 @@ def _format_accuracy_cell(summary: dict) -> str:
     return f"{summary['mean_test_accuracy'] * 100:.2f}% +/- {summary['std_test_accuracy'] * 100:.2f}%"
 
 
+def _add_figure_section(story: list, styles, heading: str, figure_paths) -> None:
+    if not figure_paths:
+        return
+    story.append(Paragraph(heading, styles["Heading1"]))
+    for dataset, encoder, figure_path in figure_paths:
+        story.append(Paragraph(f"{dataset} / {encoder}", styles["Heading2"]))
+        story.append(Image(str(figure_path), width=5 * inch, height=3.75 * inch))
+        story.append(Spacer(1, 18))
+
+
 def generate_pdf_report(
     summaries: List[dict],
     figure_paths: List[Tuple[str, str, Union[str, Path]]],
     save_path: Union[str, Path],
+    loss_curve_figure_paths: List[Tuple[str, str, Union[str, Path]]] = None,
 ) -> None:
-    """Build a single-file PDF report: accuracy table, then one
-    accuracy-vs-training-size plot per (dataset, encoder) pair.
+    """Build a single-file PDF report: accuracy table, accuracy-vs-shot
+    plots, and (optionally) loss-curve plots.
 
     Args:
         summaries: aggregated results from aggregation.aggregate_results().
-        figure_paths: (dataset, encoder, png_path) tuples, one per plot to embed.
+        figure_paths: (dataset, encoder, png_path) tuples, accuracy-vs-shot plots.
         save_path: where to save the PDF.
+        loss_curve_figure_paths: (dataset, encoder, png_path) tuples, loss-curve
+            plots; omitted entirely from the PDF if not provided.
     """
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,10 +82,9 @@ def generate_pdf_report(
     story.append(table)
     story.append(Spacer(1, 24))
 
-    story.append(Paragraph("Accuracy vs. training-set size", styles["Heading1"]))
-    for dataset, encoder, figure_path in figure_paths:
-        story.append(Paragraph(f"{dataset} / {encoder}", styles["Heading2"]))
-        story.append(Image(str(figure_path), width=5 * inch, height=3.75 * inch))
-        story.append(Spacer(1, 18))
+    _add_figure_section(story, styles, "Accuracy vs. training-set size", figure_paths)
+    _add_figure_section(
+        story, styles, "Training / validation loss (10-shot, seed 0)", loss_curve_figure_paths or []
+    )
 
     SimpleDocTemplate(str(save_path), pagesize=letter).build(story)
