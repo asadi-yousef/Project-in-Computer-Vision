@@ -96,7 +96,17 @@ no subset to select). Outputs are saved under `outputs/prototype/<dataset>/<enco
 
 ## Running all experiments
 
-_To be completed in Task 18._
+To run the entire stage_1.pdf protocol in one go (feature extraction for anything not
+already cached, then every linear-probe and prototype run):
+
+```bash
+python scripts/run_all_experiments.py
+```
+
+It's safe to interrupt and re-run: anything already completed (a `result.json` on disk) is
+skipped. Pass `--force-rerun` to re-run and overwrite completed linear-probe/prototype
+experiments (already-cached features are always reused regardless, since re-extracting them
+is expensive and unrelated to re-running training).
 
 ## Regenerating tables and plots
 
