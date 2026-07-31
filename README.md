@@ -142,7 +142,21 @@ outputs/  # results, checkpoints, tables, plots (gitignored)
 
 ## Reproducibility
 
-_To be completed in Task 2 / Task 19._
+- **Seeding**: `src/utils/seeding.py::set_seed()` seeds Python, NumPy, and PyTorch together.
+  A single `seed` (0, 1, or 2) drives both the balanced K-shot subset selection and the
+  classifier's initialization/shuffling for a given run (see `src/utils/config.py`).
+- **Determinism**: same seed -> identical training history and identical K-shot subset,
+  verified in `tests/test_linear_probe.py` and `tests/test_few_shot.py`.
+- **Run metadata**: every result is saved alongside its full config, git commit hash, and
+  library versions (`src/utils/run_metadata.py`), so any number can be traced back to exactly
+  what produced it.
+- **Integrity checks** (`tests/test_integrity.py`) guard the experiment rules that are easy to
+  violate by accident rather than by incorrect implementation: encoders never drift or behave
+  stochastically in eval mode (BatchNorm stats, DINOv2 determinism), classifier code never
+  imports an encoder module (so training/evaluation can never silently re-run the image
+  encoder), and - when real data/cache/outputs are present - the actual completed runs are
+  checked against the exact stage_1.pdf run-count protocol (3 seeds per linear-probe setting;
+  3 seeds for prototype 5-/10-shot, 1 run for prototype full).
 
 ## Common errors
 
