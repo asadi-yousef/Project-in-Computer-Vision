@@ -27,8 +27,6 @@ test only for final reporting).
 
 ## Environment setup
 
-_To be completed in Task 2._
-
 This project targets both a Windows PC with a CUDA GPU and a Mac laptop. Code selects the
 compute device automatically (`cuda` → `mps` → `cpu`) and avoids OS-specific paths.
 
@@ -39,6 +37,12 @@ pip install -r requirements.txt
 > Note: the default `torch`/`torchvision` wheels from `requirements.txt` work on both platforms.
 > For a CUDA-accelerated build on Windows, follow the install command generated at
 > https://pytorch.org/get-started/locally/ for your specific CUDA version instead.
+
+Verify which device will actually be used before training:
+
+```bash
+python scripts/check_device.py
+```
 
 ## Dataset preparation
 
@@ -135,10 +139,21 @@ reproducibility, generated once and reused on every re-run).
 ## Output directory structure
 
 ```
-data/     # raw datasets (gitignored)
-cache/    # cached frozen-encoder features (gitignored)
-outputs/  # results, checkpoints, tables, plots (gitignored)
+configs/           # example experiment config (YAML schema reference)
+src/               # library code (data, encoders, features, classifiers, evaluation, visualization, utils)
+scripts/           # CLI entry points
+tests/             # test suite (pytest)
+data/              # raw datasets (gitignored - regenerate via scripts/verify_dataset_splits.py --download)
+cache/             # cached frozen-encoder features (gitignored - regenerate via scripts/extract_features.py)
+outputs/           # per-run configs, checkpoints, history, results (gitignored - regenerate via scripts/run_all_experiments.py)
+reports/           # aggregated summary.{json,csv}, figures/, feature_viz_selection_*.json (tracked - small, final numbers)
+RESULTS.md         # generated results report (tracked)
+RESULTS.pdf        # same report as a PDF (tracked)
 ```
+
+`data/`, `cache/`, and `outputs/` are gitignored because they're large and fully regenerable from
+the code plus a fixed seed. `reports/` and the root `RESULTS.*` files are tracked, since they're
+small and are the actual reportable deliverable.
 
 ## Reproducibility
 
@@ -160,7 +175,28 @@ outputs/  # results, checkpoints, tables, plots (gitignored)
 
 ## Common errors
 
-_To be completed as they are encountered._
+- **`RuntimeError: Dataset not found. You can use download=True to download it`** — DTD/Flowers-102
+  data isn't in `data/` yet. Run `scripts/verify_dataset_splits.py` with `--download` first (see
+  Dataset preparation above); `download=False` is the default everywhere else on purpose, to
+  avoid re-downloading by accident.
+- **`ValueError: dinov2_vits14 is only used on 'dtd' in this project`** — intentional: this
+  project scoped DINOv2 to DTD only (see `src/utils/config.py`). Not a bug; pass
+  `--encoder resnet18` for Flowers-102.
+- **`UserWarning: xFormers is not available`** when building `DINOv2Encoder` — harmless. DINOv2
+  falls back to a native (non-xFormers) attention implementation; this project doesn't depend on
+  xFormers to keep dependencies minimal.
+- **`Selected device: cpu` on a machine with a GPU** — the installed `torch` build doesn't have
+  CUDA support (the plain `pip install torch` wheel is CPU-only on Windows). Install the
+  CUDA-enabled wheel from https://pytorch.org/get-started/locally/, then confirm with
+  `scripts/check_device.py`.
+- **pytest fails with a `PermissionError` on a `pytest-of-<user>` temp directory** (seen on
+  Windows when a stale/locked temp folder exists from another process) — already worked around
+  via `--basetemp=.pytest_tmp` in `pyproject.toml`, which keeps pytest's temp files inside the
+  project instead of the OS temp directory. If it still happens, delete `.pytest_tmp/` and retry.
+- **Non-ASCII characters in file paths** (e.g. a Windows username with accented/non-Latin
+  characters) can cause some third-party tools to mis-render paths in error messages or logs.
+  This doesn't affect the actual file I/O (Python handles Unicode paths correctly) - only cosmetic
+  output.
 
 ## Running tests
 
