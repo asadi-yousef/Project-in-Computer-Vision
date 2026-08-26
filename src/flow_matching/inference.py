@@ -139,3 +139,74 @@ def trajectory_with_checkpoint(
     model.eval()
     with torch.no_grad():
         return euler_trajectory(model, features.to(device), num_steps).cpu()
+
+
+def reverse_euler_trajectory(
+    velocity_net: nn.Module, features: torch.Tensor, num_steps: int
+) -> torch.Tensor:
+    """Integrate the learned field *backwards*, from t=1 down to t=0.
+
+    stage_2.pdf's optional exploration: start from the class prototypes and
+    run the flow in reverse to see what the model treats as a typical member
+    of each class. This is explicit Euler applied to the reversed ODE,
+
+        z_hat_{k-1} = z_hat_k - (1/T) * v_theta(z_hat_k, k/T),   k = T, ..., 1
+
+    so the times visited are 1, (T-1)/T, ..., 1/T - the mirror of the forward
+    schedule.
+
+    One caveat worth knowing when reading the result: the forward integrator
+    never evaluates at t=1 (it stops at (T-1)/T), so the first reverse step
+    asks the network about a time the forward pass never visits. For a
+    standard-FM network that is harmless, since its training samples t
+    continuously from U(0,1) and so covers times arbitrarily close to 1. For
+    a rolled-out network it is genuine extrapolation: that network only ever
+    saw the discrete times k/T for k < T. Reverse trajectories from a
+    rolled-out model should be read with that in mind.
+
+    Unlike the forward direction there is no separate endpoint-only variant:
+    reverse integration is used purely for visualizing a handful of
+    prototypes, never in a training or evaluation hot path, so the memory
+    argument that justified splitting `euler_transport` from
+    `euler_trajectory` does not apply here.
+
+    Args:
+        velocity_net: the velocity network v_theta.
+        features: (N, D) starting points, normally the class prototypes.
+        num_steps: T, the number of Euler steps.
+
+    Returns:
+        (T+1, N, D) states in integration order: index 0 is the starting
+        point (t=1) and index T is the final backward state (t=0).
+
+    Raises:
+        ValueError: if num_steps is not at least 1.
+    """
+    if num_steps < 1:
+        raise ValueError(f"num_steps must be at least 1, got {num_steps}")
+
+    state = features
+    states = [state]
+    for step in range(num_steps, 0, -1):
+        state = state - velocity_net(state, step / num_steps) / num_steps
+        states.append(state)
+    return torch.stack(states)
+
+
+def reverse_trajectory_with_checkpoint(
+    state_dict: Dict[str, torch.Tensor],
+    hidden_dims: Sequence[int],
+    features: torch.Tensor,
+    num_steps: int,
+    device: torch.device,
+) -> torch.Tensor:
+    """Rebuild a trained velocity network and integrate it backwards.
+
+    Returns:
+        (T+1, N, D) reverse trajectory, on CPU.
+    """
+    model = VelocityNetwork(features.shape[1], hidden_dims).to(device)
+    model.load_state_dict(state_dict)
+    model.eval()
+    with torch.no_grad():
+        return reverse_euler_trajectory(model, features.to(device), num_steps).cpu()

@@ -2,7 +2,12 @@ import pytest
 import torch
 import torch.nn as nn
 
-from src.flow_matching.inference import euler_trajectory, euler_transport
+from src.flow_matching.inference import (
+    euler_trajectory,
+    euler_transport,
+    reverse_euler_trajectory,
+    reverse_trajectory_with_checkpoint,
+)
 from src.flow_matching.velocity_net import VelocityNetwork
 from src.utils.seeding import set_seed
 
@@ -198,3 +203,87 @@ def test_non_positive_step_count_raises(num_steps):
         euler_transport(net, features, num_steps)
     with pytest.raises(ValueError, match="num_steps"):
         euler_trajectory(net, features, num_steps)
+
+
+# --- Stage 2 optional: reverse integration from the prototypes ---
+
+
+def test_reverse_trajectory_has_one_more_state_than_steps():
+    set_seed(0)
+    net = VelocityNetwork(feature_dim=6, hidden_dims=[8])
+    prototypes = torch.randn(4, 6)
+
+    trajectory = reverse_euler_trajectory(net, prototypes, num_steps=4)
+
+    assert trajectory.shape == (5, 4, 6)
+
+
+def test_reverse_trajectory_starts_at_the_prototype():
+    set_seed(0)
+    net = VelocityNetwork(feature_dim=6, hidden_dims=[8])
+    prototypes = torch.randn(3, 6)
+
+    trajectory = reverse_euler_trajectory(net, prototypes, num_steps=12)
+
+    assert torch.equal(trajectory[0], prototypes)
+
+
+def test_reverse_visits_the_mirrored_time_schedule():
+    # Forward visits k/T for k = 0..T-1; reverse mirrors it, from t=1 down.
+    net = RecordingVelocity()
+    reverse_euler_trajectory(net, torch.randn(2, 3), num_steps=4)
+
+    assert net.seen_times == [1.0, 0.75, 0.5, 0.25]
+
+
+def test_reverse_undoes_a_constant_velocity_exactly():
+    velocity = torch.tensor([[2.0, -3.0]])
+    net = ConstantVelocity(velocity)
+    start = torch.tensor([[1.0, 1.0], [0.0, 5.0]])
+
+    transported = euler_transport(net, start, num_steps=12)
+    recovered = reverse_euler_trajectory(net, transported, num_steps=12)[-1]
+
+    assert torch.allclose(recovered, start, atol=1e-5)
+
+
+def test_reverse_moves_opposite_to_the_forward_direction():
+    velocity = torch.tensor([[1.0, 0.0]])
+    net = ConstantVelocity(velocity)
+    start = torch.zeros(1, 2)
+
+    forward_end = euler_transport(net, start, num_steps=4)
+    reverse_end = reverse_euler_trajectory(net, start, num_steps=4)[-1]
+
+    assert forward_end[0, 0] > 0
+    assert reverse_end[0, 0] < 0
+
+
+def test_reverse_zero_velocity_leaves_prototypes_untouched():
+    net = ConstantVelocity(torch.zeros(1, 3))
+    prototypes = torch.randn(4, 3)
+
+    trajectory = reverse_euler_trajectory(net, prototypes, num_steps=12)
+
+    assert torch.allclose(trajectory[-1], prototypes)
+
+
+@pytest.mark.parametrize("num_steps", [0, -1])
+def test_reverse_rejects_non_positive_step_counts(num_steps):
+    net = ConstantVelocity(torch.zeros(1, 3))
+    with pytest.raises(ValueError, match="num_steps"):
+        reverse_euler_trajectory(net, torch.randn(2, 3), num_steps)
+
+
+def test_reverse_trajectory_with_checkpoint_matches_a_live_model():
+    set_seed(0)
+    net = VelocityNetwork(feature_dim=6, hidden_dims=[8, 8])
+    prototypes = torch.randn(3, 6)
+
+    with torch.no_grad():
+        expected = reverse_euler_trajectory(net, prototypes, num_steps=4)
+    from_checkpoint = reverse_trajectory_with_checkpoint(
+        net.state_dict(), [8, 8], prototypes, 4, torch.device("cpu")
+    )
+
+    assert torch.allclose(from_checkpoint, expected, atol=1e-6)

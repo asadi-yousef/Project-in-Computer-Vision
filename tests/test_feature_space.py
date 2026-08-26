@@ -1,3 +1,10 @@
+from unittest import mock
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
 import pytest
 import torch
 
@@ -5,6 +12,8 @@ from src.visualization.feature_space import (
     FeatureVisualizationSelection,
     load_selection,
     plot_feature_space,
+    plot_feature_space_comparison,
+    project_feature_groups,
     project_features_and_prototypes,
     save_selection,
     select_classes_and_samples,
@@ -117,3 +126,188 @@ def test_plot_feature_space_is_saved_to_disk(tmp_path):
 
     assert save_path.exists()
     assert save_path.stat().st_size > 0
+
+
+# --- Stage 2: joint projection over several feature sets ---
+
+
+def test_joint_projection_returns_one_array_per_group():
+    groups = [torch.randn(12, 6), torch.randn(12, 6), torch.randn(5, 6)]
+
+    projected = project_feature_groups(groups, seed=0)
+
+    assert [array.shape for array in projected] == [(12, 2), (12, 2), (5, 2)]
+
+
+def test_joint_projection_fits_once_over_the_concatenation():
+    # The property stage_2.pdf requires: one projection covering every group,
+    # so the panels share a coordinate system. Asserted on the call itself
+    # rather than on output coordinates, because t-SNE is not a function -
+    # duplicate points repel each other rather than coinciding, so equal
+    # inputs are not expected to produce equal outputs.
+    groups = [torch.randn(12, 6), torch.randn(9, 6), torch.randn(4, 6)]
+    captured = {}
+
+    class FakeTSNE:
+        def __init__(self, **kwargs):
+            captured["kwargs"] = kwargs
+
+        def fit_transform(self, array):
+            captured["calls"] = captured.get("calls", 0) + 1
+            captured["shape"] = array.shape
+            return np.zeros((array.shape[0], 2))
+
+    with mock.patch("src.visualization.feature_space.TSNE", FakeTSNE):
+        project_feature_groups(groups, seed=0)
+
+    assert captured["calls"] == 1
+    assert captured["shape"] == (25, 6)  # 12 + 9 + 4 rows, projected together
+
+
+def test_joint_projection_is_reproducible_given_a_seed():
+    groups = [torch.randn(15, 6), torch.randn(15, 6)]
+
+    first = project_feature_groups(groups, seed=3)
+    second = project_feature_groups(groups, seed=3)
+
+    assert all(np.allclose(a, b) for a, b in zip(first, second))
+
+
+def test_joint_projection_normalizes_before_fitting():
+    # Post-FM features drift off the unit sphere and raw encoder features
+    # never were on it, so without normalizing, t-SNE distances would be
+    # dominated by magnitude instead of direction.
+    groups = [torch.randn(10, 6) * 37.0, torch.randn(4, 6) * 0.01]
+    captured = {}
+
+    class FakeTSNE:
+        def __init__(self, **kwargs):
+            pass
+
+        def fit_transform(self, array):
+            captured["array"] = array
+            return np.zeros((array.shape[0], 2))
+
+    with mock.patch("src.visualization.feature_space.TSNE", FakeTSNE):
+        project_feature_groups(groups, seed=0)
+
+    norms = np.linalg.norm(captured["array"], axis=1)
+    assert np.allclose(norms, 1.0, atol=1e-5)
+
+
+def test_joint_projection_rejects_empty_input():
+    with pytest.raises(ValueError, match="empty"):
+        project_feature_groups([], seed=0)
+
+
+def test_joint_projection_rejects_mismatched_dimensions():
+    with pytest.raises(ValueError, match="dimension"):
+        project_feature_groups([torch.randn(10, 6), torch.randn(10, 8)], seed=0)
+
+
+# --- Stage 2: the three-panel comparison figure ---
+
+
+def _comparison_inputs(num_classes=3, per_class=5):
+    sample_class_ids = [c for c in range(num_classes) for _ in range(per_class)]
+    num_samples = len(sample_class_ids)
+    rng = np.random.default_rng(0)
+    panels = [
+        ("original", rng.normal(size=(num_samples, 2))),
+        ("after standard FM", rng.normal(size=(num_samples, 2))),
+        ("after rolled-out FM", rng.normal(size=(num_samples, 2))),
+    ]
+    prototype_2d = rng.normal(size=(num_classes, 2))
+    class_names = [f"class{c}" for c in range(num_classes)]
+    return panels, prototype_2d, sample_class_ids, list(range(num_classes)), class_names
+
+
+def test_comparison_figure_is_saved(tmp_path):
+    panels, prototype_2d, sample_ids, prototype_ids, names = _comparison_inputs()
+    save_path = tmp_path / "compare.png"
+
+    plot_feature_space_comparison(
+        panels, prototype_2d, sample_ids, prototype_ids, names, "title", save_path
+    )
+
+    assert save_path.exists()
+    assert save_path.stat().st_size > 0
+
+
+def test_comparison_figure_draws_one_panel_per_view(tmp_path):
+    panels, prototype_2d, sample_ids, prototype_ids, names = _comparison_inputs()
+    figures = []
+    original_subplots = plt.subplots
+
+    def capture_subplots(*args, **kwargs):
+        result = original_subplots(*args, **kwargs)
+        figures.append(result)
+        return result
+
+    with mock.patch.object(plt, "subplots", side_effect=capture_subplots):
+        plot_feature_space_comparison(
+            panels, prototype_2d, sample_ids, prototype_ids, names, "title",
+            tmp_path / "compare.png",
+        )
+
+    figure, axes = figures[0]
+    assert axes.shape == (1, 3)
+    assert [axis.get_title() for axis in axes[0]] == [
+        "original", "after standard FM", "after rolled-out FM",
+    ]
+
+
+def test_all_panels_share_axis_limits(tmp_path):
+    # The projection is joint, so the panels must be drawn on one scale;
+    # otherwise a sample appearing to move would be a drawing artifact.
+    panels, prototype_2d, sample_ids, prototype_ids, names = _comparison_inputs()
+    figures = []
+    original_subplots = plt.subplots
+
+    def capture_subplots(*args, **kwargs):
+        result = original_subplots(*args, **kwargs)
+        figures.append(result)
+        return result
+
+    with mock.patch.object(plt, "subplots", side_effect=capture_subplots):
+        plot_feature_space_comparison(
+            panels, prototype_2d, sample_ids, prototype_ids, names, "title",
+            tmp_path / "compare.png",
+        )
+
+    axes = figures[0][1][0]
+    assert len({axis.get_xlim() for axis in axes}) == 1
+    assert len({axis.get_ylim() for axis in axes}) == 1
+
+
+def test_every_panel_shows_the_same_prototypes(tmp_path):
+    # Prototypes are the flow's fixed targets and are never transported.
+    panels, prototype_2d, sample_ids, prototype_ids, names = _comparison_inputs()
+    figures = []
+    original_subplots = plt.subplots
+
+    def capture_subplots(*args, **kwargs):
+        result = original_subplots(*args, **kwargs)
+        figures.append(result)
+        return result
+
+    with mock.patch.object(plt, "subplots", side_effect=capture_subplots):
+        plot_feature_space_comparison(
+            panels, prototype_2d, sample_ids, prototype_ids, names, "title",
+            tmp_path / "compare.png",
+        )
+
+    axes = figures[0][1][0]
+    # 3 class collections + 3 prototype collections per panel.
+    prototype_offsets = [
+        np.concatenate([c.get_offsets() for c in axis.collections[3:]]) for axis in axes
+    ]
+    assert all(np.allclose(offsets, prototype_offsets[0]) for offsets in prototype_offsets)
+
+
+def test_comparison_figure_rejects_empty_panels(tmp_path):
+    _, prototype_2d, sample_ids, prototype_ids, names = _comparison_inputs()
+    with pytest.raises(ValueError, match="empty"):
+        plot_feature_space_comparison(
+            [], prototype_2d, sample_ids, prototype_ids, names, "t", tmp_path / "c.png"
+        )

@@ -16,7 +16,7 @@ import dataclasses
 import json
 import random
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Sequence, Tuple, Union
 
 import matplotlib
 
@@ -199,6 +199,138 @@ def plot_feature_space(
         loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=8,
         title="Class (o = image, * = prototype)",
     )
+
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(save_path, bbox_inches="tight")
+    plt.close(fig)
+
+
+def project_feature_groups(
+    feature_groups: Sequence[torch.Tensor], seed: int = 0
+) -> List[np.ndarray]:
+    """Jointly fit one 2D t-SNE over several feature sets and split the result.
+
+    stage_2.pdf requires the projection be computed jointly over the feature
+    sets and prototypes being compared, so that the different views
+    correspond to the same low-dimensional representation. Fitting each panel
+    separately would produce three unrelated coordinate systems, and a sample
+    "moving" between panels would mean nothing.
+
+    Every group is L2-normalized first, for the same reason
+    `project_features_and_prototypes` does it: prototypes are unit-norm by
+    construction while raw encoder features are not, and post-FM features
+    have drifted off the sphere entirely, so without normalizing, t-SNE's
+    distances would be dominated by magnitude rather than direction - the
+    opposite of what the cosine classifier actually uses.
+
+    Args:
+        feature_groups: the (N_i, D) tensors to project together. All must
+            share the same feature dimension D.
+        seed: t-SNE is stochastic; this makes the layout reproducible.
+
+    Returns:
+        One (N_i, 2) array per input group, in the same order.
+
+    Raises:
+        ValueError: if no groups are given, or their dimensions disagree.
+    """
+    if not feature_groups:
+        raise ValueError("feature_groups is empty; nothing to project")
+    dimensions = {group.shape[1] for group in feature_groups}
+    if len(dimensions) != 1:
+        raise ValueError(f"All feature groups must share one dimension, got {sorted(dimensions)}")
+
+    normalized = [torch.nn.functional.normalize(group, dim=1) for group in feature_groups]
+    combined = torch.cat(normalized, dim=0).numpy()
+
+    perplexity = min(30, max(2, combined.shape[0] // 4))
+    projected = TSNE(
+        n_components=2, random_state=seed, perplexity=perplexity, init="pca"
+    ).fit_transform(combined)
+
+    outputs = []
+    offset = 0
+    for group in feature_groups:
+        outputs.append(projected[offset : offset + group.shape[0]])
+        offset += group.shape[0]
+    return outputs
+
+
+def plot_feature_space_comparison(
+    panels: Sequence[Tuple[str, np.ndarray]],
+    prototype_2d: np.ndarray,
+    sample_class_ids: List[int],
+    prototype_class_ids: List[int],
+    class_names: List[str],
+    suptitle: str,
+    save_path: Union[str, Path],
+) -> None:
+    """Plot several views of the same test samples side by side.
+
+    All panels share one colour map, one set of axis limits, and the same
+    prototype positions, so differences between panels are differences in
+    where the samples went - not in how the panels were drawn. The prototypes
+    are identical across panels by construction: they are the flow's fixed
+    targets and are never transported.
+
+    Args:
+        panels: (title, sample_2d) per panel, e.g. original / after standard
+            FM / after rolled-out FM. All coordinates must come from one
+            joint projection (see `project_feature_groups`).
+        prototype_2d: (C, 2) projected prototype coordinates, shared by every panel.
+        sample_class_ids: (N,) true class id per test sample, shared by every panel.
+        prototype_class_ids: (C,) class id per prototype, matching prototype_2d order.
+        class_names: full dataset class-name list, indexed by class id.
+        suptitle: figure-level title.
+        save_path: where to save the PNG.
+
+    Raises:
+        ValueError: if no panels are given.
+    """
+    if not panels:
+        raise ValueError("panels is empty; nothing to plot")
+
+    unique_class_ids = sorted(set(sample_class_ids))
+    color_map = {class_id: plt.cm.tab10(i % 10) for i, class_id in enumerate(unique_class_ids)}
+    sample_class_ids_array = np.array(sample_class_ids)
+
+    fig, axes = plt.subplots(
+        1, len(panels), figsize=(5.2 * len(panels), 5.0), dpi=150, squeeze=False
+    )
+    axes = axes[0]
+
+    all_x = np.concatenate([sample_2d[:, 0] for _, sample_2d in panels] + [prototype_2d[:, 0]])
+    all_y = np.concatenate([sample_2d[:, 1] for _, sample_2d in panels] + [prototype_2d[:, 1]])
+    margin_x = 0.05 * (all_x.max() - all_x.min())
+    margin_y = 0.05 * (all_y.max() - all_y.min())
+
+    for axis, (title, sample_2d) in zip(axes, panels):
+        for class_id in unique_class_ids:
+            mask = sample_class_ids_array == class_id
+            axis.scatter(
+                sample_2d[mask, 0], sample_2d[mask, 1],
+                color=color_map[class_id], marker="o", s=22, alpha=0.7,
+                label=class_names[class_id],
+            )
+        for prototype_point, class_id in zip(prototype_2d, prototype_class_ids):
+            axis.scatter(
+                prototype_point[0], prototype_point[1],
+                color=color_map[class_id], marker="*", s=340,
+                edgecolors="black", linewidths=1.2, zorder=5,
+            )
+        axis.set_title(title, fontsize=10)
+        axis.set_xlabel("t-SNE dimension 1")
+        axis.set_xlim(all_x.min() - margin_x, all_x.max() + margin_x)
+        axis.set_ylim(all_y.min() - margin_y, all_y.max() + margin_y)
+
+    axes[0].set_ylabel("t-SNE dimension 2")
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(
+        handles, labels, loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=8,
+        title="Class (o = image, * = prototype)",
+    )
+    fig.suptitle(suptitle, fontsize=11)
 
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
