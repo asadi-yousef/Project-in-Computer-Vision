@@ -1,11 +1,14 @@
 """End-to-end orchestration: extract any missing cached features, then run
-every linear-probe and prototype experiment required by stage_1.pdf's full
-protocol (both datasets x their encoders x k-shot settings x seeds),
+every linear-probe, prototype, and flow-matching experiment required by the
+Stage 1 and Stage 2 protocols (both datasets x their encoders x k-shot
+settings x seeds, and for flow matching x method x Euler-step count),
 skipping anything already completed.
 
 This trains real models - expect it to take a while (DINOv2 full-data
-linear-probe runs are the slowest part on CPU). Safe to interrupt and
-re-run: completed runs are skipped unless --force-rerun is passed.
+linear-probe runs are the slowest part on CPU, and rolled-out FM at T=12
+backpropagates through 12 chained network evaluations per step). Safe to
+interrupt and re-run: completed runs are skipped unless --force-rerun is
+passed.
 
 Usage:
     python scripts/run_all_experiments.py
@@ -31,8 +34,8 @@ def main() -> None:
     parser.add_argument("--output-dir", default="outputs")
     parser.add_argument(
         "--force-rerun", action="store_true",
-        help="Re-run linear-probe/prototype experiments even if a result already exists. "
-             "Already-cached features are always reused regardless of this flag.",
+        help="Re-run classifier and flow-matching experiments even if a result already "
+             "exists. Already-cached features are always reused regardless of this flag.",
     )
     args = parser.parse_args()
 

@@ -17,8 +17,12 @@ detaches or wraps itself in `torch.no_grad()`:
   - the trajectory visualizations and per-step analyses.
 """
 
+from typing import Dict, Sequence
+
 import torch
 import torch.nn as nn
+
+from src.flow_matching.velocity_net import VelocityNetwork
 
 
 def euler_transport(
@@ -83,3 +87,55 @@ def euler_trajectory(
         state = state + velocity_net(state, step / num_steps) / num_steps
         states.append(state)
     return torch.stack(states)
+
+
+def transport_with_checkpoint(
+    state_dict: Dict[str, torch.Tensor],
+    hidden_dims: Sequence[int],
+    features: torch.Tensor,
+    num_steps: int,
+    device: torch.device,
+) -> torch.Tensor:
+    """Rebuild a trained velocity network from a checkpoint and transport features.
+
+    A convenience wrapper over `euler_transport` for every caller that has a
+    saved run rather than a live model: test-set evaluation in the experiment
+    runner, and the feature-space and per-step visualizations. Always runs
+    under `no_grad` in eval mode, and returns a CPU tensor, since none of
+    those callers want gradients or device-resident results.
+
+    Args:
+        state_dict: weights saved by a flow-matching training run.
+        hidden_dims: the hidden widths the network was built with; must match
+            the checkpoint.
+        features: (N, D) starting points, L2-normalized by the caller.
+        num_steps: T, the number of Euler steps.
+        device: device to integrate on.
+
+    Returns:
+        (N, D) transported features, on CPU.
+    """
+    model = VelocityNetwork(features.shape[1], hidden_dims).to(device)
+    model.load_state_dict(state_dict)
+    model.eval()
+    with torch.no_grad():
+        return euler_transport(model, features.to(device), num_steps).cpu()
+
+
+def trajectory_with_checkpoint(
+    state_dict: Dict[str, torch.Tensor],
+    hidden_dims: Sequence[int],
+    features: torch.Tensor,
+    num_steps: int,
+    device: torch.device,
+) -> torch.Tensor:
+    """Same as `transport_with_checkpoint`, but keeping every intermediate state.
+
+    Returns:
+        (T+1, N, D) trajectory, on CPU.
+    """
+    model = VelocityNetwork(features.shape[1], hidden_dims).to(device)
+    model.load_state_dict(state_dict)
+    model.eval()
+    with torch.no_grad():
+        return euler_trajectory(model, features.to(device), num_steps).cpu()
