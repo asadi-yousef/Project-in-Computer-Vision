@@ -1,10 +1,12 @@
-# CVLAB Summer Project — Stage 1: Classification Baselines
+# CVLAB Summer Project — Stages 1 and 2
 
 ## Project goal
 
-This repository implements Stage 1 of a multi-stage computer-vision project: a reproducible
-image classification pipeline built on **frozen pretrained encoders**. No flow-matching
-component is used at this stage — that is introduced in later stages.
+This repository implements a multi-stage computer-vision project built on **frozen
+pretrained encoders**. Stage 1 establishes reproducible classification baselines; Stage 2
+adds a flow-matching layer that transports a frozen feature toward its class prototype.
+The encoders are never fine-tuned at any stage — only the classifier and, in Stage 2, the
+velocity network are trained.
 
 ## Stage 1 scope
 
@@ -18,6 +20,37 @@ Two baselines are implemented and compared:
 Both baselines are evaluated at three training-set sizes per dataset: 5-shot, 10-shot, and full,
 using the official train/validation/test splits (validation is used only for model selection,
 test only for final reporting).
+
+## Stage 2 scope
+
+Stage 2 adds a small velocity network `v(z, t)` — an MLP with two hidden layers of width 512
+and SiLU activations, with the scalar time concatenated to the feature — trained to transport
+a frozen feature toward the prototype of its class. Two training objectives are compared:
+
+1. **Standard flow matching** — sample `t ~ U(0,1)`, interpolate `z_t = (1-t)z + t*p_y`, and
+   regress `v(z_t, t)` toward the constant target velocity `p_y - z`. The path is never
+   discretized, so one trained network serves every T.
+2. **Rolled-out flow matching** — unroll the full T-step Euler sequence used at inference and
+   supervise only the final transported point against the prototype, backpropagating through
+   all T steps. T is baked into the weights, so training and inference must use the same T.
+
+At inference both variants take T Euler steps (`T` in {4, 12}) and classify the transported
+feature by cosine similarity to **the same prototypes Stage 1 used**. Every run reuses the
+identical K-shot subset, seed and prototypes as the corresponding Stage 1 prototype run —
+`src/flow_matching/runner.py` calls the same `sample_balanced_subset_indices` and
+`compute_class_prototypes` functions, and each result stores the baseline accuracy it was
+compared against so any drift would be caught immediately.
+
+Two Stage 2 conventions worth knowing:
+
+- **Features are L2-normalized before the flow.** Stage 1's classifier already normalizes at
+  both ends, and raw encoder features have norms of roughly 24–48 against unit-norm
+  prototypes, which would make the regression target almost entirely about shrinking the
+  norm — a direction the cosine classifier ignores. Because cosine similarity is
+  scale-invariant, this leaves the Stage 1 baseline numbers unchanged.
+- **Training runs a fixed epoch budget and keeps the final weights.** Validation loss is
+  logged for the stability curves but never used for selection, matching stage_2.pdf's
+  request for stable training and a fair comparison rather than a tuned result.
 
 ## Selected datasets and branch
 
@@ -100,17 +133,41 @@ no subset to select). Outputs are saved under `outputs/prototype/<dataset>/<enco
 
 ## Running all experiments
 
-To run the entire stage_1.pdf protocol in one go (feature extraction for anything not
-already cached, then every linear-probe and prototype run):
+To run the entire Stage 1 and Stage 2 protocol in one go (feature extraction for anything
+not already cached, then every linear-probe, prototype and flow-matching run):
 
 ```bash
 python scripts/run_all_experiments.py
 ```
 
 It's safe to interrupt and re-run: anything already completed (a `result.json` on disk) is
-skipped. Pass `--force-rerun` to re-run and overwrite completed linear-probe/prototype
-experiments (already-cached features are always reused regardless, since re-extracting them
-is expensive and unrelated to re-running training).
+skipped. Pass `--force-rerun` to re-run and overwrite completed experiments (already-cached
+features are always reused regardless, since re-extracting them is expensive and unrelated
+to re-running training).
+
+The Stage 2 grid is 3 dataset/encoder pairs x K in {5, 10, full} x {standard, rolled-out} x
+T in {4, 12}, which is **63 trainings producing 84 run records** — the counts differ because
+standard FM trains once per (pair, K, seed) and is evaluated at both T, while rolled-out
+trains once per T. This has a consequence for resuming: rolled-out runs skip per T, but a
+standard-FM setting is only skipped when *every* T is already present, since a
+half-finished setting has no per-T training to resume from. On a laptop GPU the whole
+Stage 2 grid takes roughly ten minutes.
+
+### Repetition protocol
+
+Stage 1 uses two different run counts for the full-data setting, and Stage 2 follows the one
+belonging to the branch it extends:
+
+| method | 5-shot | 10-shot | full |
+|---|---|---|---|
+| linear probe | 3 subset seeds | 3 subset seeds | 3 initialization seeds |
+| prototype | 3 subset seeds | 3 subset seeds | **1 run** |
+| flow matching | 3 subset seeds | 3 subset seeds | **1 run** |
+
+stage_1.pdf specifies 3 initialization seeds for the full linear probe but states that "the
+full-data result requires one run" for the image-prototype branch. Stage 2 extends the
+prototype branch, so its full-data settings are single runs and carry no error bars.
+`seeds_for_k_shot` in `src/full_sweep.py` is the one place that decision lives.
 
 ## Regenerating tables and plots
 
@@ -132,6 +189,19 @@ dataset (representative setting: full training data, linear probe, seed 0), and 
 feature-space plot per (dataset, encoder) pair. No re-training occurs for confusion matrices
 or feature-space plots - both are recomputed from saved checkpoints/cached features.
 
+The same command builds the Stage 2 sections: a baseline-versus-flow-matching comparison
+table per pair, accuracy-vs-K and change-vs-baseline plots, flow-matching training curves,
+a three-panel feature-space comparison (original / after standard FM / after rolled-out FM,
+from one joint t-SNE projection), forward and reverse flow trajectories (PCA, as stage_2.pdf
+recommends — a linear projection keeps straight paths straight), and per-step metrics along
+the flow. Everything is recomputed from the saved velocity-network checkpoints, so no
+training is repeated. Missing runs are skipped with a message rather than failing the
+report, so a partially-completed sweep still produces output.
+
+The written **Observations** section of `RESULTS.md` derives its counted claims from the
+aggregated summaries rather than hardcoding them, so the prose cannot drift out of step with
+the tables if the sweep is re-run.
+
 Feature-space plots reuse the same 10 classes and 150 test samples per dataset across every
 encoder trained on it (selection stored in `reports/feature_viz_selection_<dataset>.json` for
 reproducibility, generated once and reused on every re-run).
@@ -140,7 +210,7 @@ reproducibility, generated once and reused on every re-run).
 
 ```
 configs/           # example experiment config (YAML schema reference)
-src/               # library code (data, encoders, features, classifiers, evaluation, visualization, utils)
+src/               # library code (data, encoders, features, classifiers, flow_matching, evaluation, visualization, utils)
 scripts/           # CLI entry points
 tests/             # test suite (pytest)
 data/              # raw datasets (gitignored - regenerate via scripts/verify_dataset_splits.py --download)
@@ -154,6 +224,21 @@ RESULTS.pdf        # same report as a PDF (tracked)
 `data/`, `cache/`, and `outputs/` are gitignored because they're large and fully regenerable from
 the code plus a fixed seed. `reports/` and the root `RESULTS.*` files are tracked, since they're
 small and are the actual reportable deliverable.
+
+Within `outputs/`, each method gets its own tree. Stage 2 inserts a `T<steps>` level and reuses
+the prototype branch's `single_run` folder for the full-data setting:
+
+```
+outputs/linear_probe/<dataset>/<encoder>/k<k>/seed<n>/
+outputs/prototype/<dataset>/<encoder>/k<k>/{seed<n>|single_run}/
+outputs/fm_standard/<dataset>/<encoder>/k<k>/T<steps>/{seed<n>|single_run}/
+outputs/fm_rolled/<dataset>/<encoder>/k<k>/T<steps>/{seed<n>|single_run}/
+```
+
+Every flow-matching run directory is self-contained — `config.yaml`, `history.json`,
+`result.json` and `checkpoint.pt` — so every Stage 2 figure can be rebuilt from the saved
+weights without retraining. The two standard-FM directories for a given (pair, K, seed) hold
+the same checkpoint, because that objective does not depend on T.
 
 ## Reproducibility
 
@@ -172,6 +257,10 @@ small and are the actual reportable deliverable.
   encoder), and - when real data/cache/outputs are present - the actual completed runs are
   checked against the exact stage_1.pdf run-count protocol (3 seeds per linear-probe setting;
   3 seeds for prototype 5-/10-shot, 1 run for prototype full).
+- **Stage 1 / Stage 2 comparability**: `tests/test_flow_runner.py` asserts that the
+  prototypes a flow-matching run trains against reproduce the corresponding Stage 1 run's
+  stored test accuracy to within 1e-9, using the real cache and outputs when present. If the
+  subsets or prototypes ever drift apart, the comparison stops being valid and this fails.
 
 ## Common errors
 

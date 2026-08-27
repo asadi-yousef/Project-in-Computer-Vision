@@ -22,6 +22,19 @@ def _format_accuracy_cell(summary: dict) -> str:
     return f"{summary['mean_test_accuracy'] * 100:.2f}% +/- {summary['std_test_accuracy'] * 100:.2f}%"
 
 
+def _format_delta_cell(summary: dict) -> str:
+    """Signed change against the run's own paired baseline, or "-" for the
+    Stage 1 methods, which have no baseline to compare against."""
+    mean_delta = summary.get("mean_delta_accuracy")
+    if mean_delta is None:
+        return "-"
+    text = f"{mean_delta * 100:+.2f}%"
+    std_delta = summary.get("std_delta_accuracy")
+    if std_delta is not None:
+        text += f" +/- {std_delta * 100:.2f}%"
+    return text
+
+
 def _add_figure_section(story: list, styles, heading: str, figure_paths) -> None:
     if not figure_paths:
         return
@@ -39,6 +52,8 @@ def generate_pdf_report(
     loss_curve_figure_paths: List[Tuple[str, str, Union[str, Path]]] = None,
     confusion_matrix_figure_paths: List[Tuple[str, str, Union[str, Path]]] = None,
     feature_space_figure_paths: List[Tuple[str, str, Union[str, Path]]] = None,
+    extra_figure_sections: List[Tuple[str, List[Tuple[str, str, Union[str, Path]]]]] = None,
+    title: str = "Stage 1 Results",
 ) -> None:
     """Build a single-file PDF report: accuracy table, accuracy-vs-shot
     plots, and (optionally) loss-curve, confusion-matrix, and feature-space
@@ -54,23 +69,32 @@ def generate_pdf_report(
             confusion-matrix plots; section omitted entirely if not provided.
         feature_space_figure_paths: (dataset, encoder, png_path) tuples,
             feature-space plots; section omitted entirely if not provided.
+        extra_figure_sections: (heading, figure_paths) pairs appended after the
+            sections above. Stage 2 supplies its figures this way rather than
+            adding a named parameter per figure type.
+        title: document title.
     """
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     styles = getSampleStyleSheet()
-    story = [Paragraph("Stage 1 Results", styles["Title"]), Spacer(1, 12)]
+    story = [Paragraph(title, styles["Title"]), Spacer(1, 12)]
 
-    table_data = [["Dataset", "Encoder", "Method", "K-shot", "Runs", "Test Accuracy"]]
+    table_data = [
+        ["Dataset", "Encoder", "Method", "T", "K-shot", "Runs", "Test Accuracy", "Delta"]
+    ]
     for summary in summaries:
+        num_euler_steps = summary.get("num_euler_steps")
         table_data.append(
             [
                 summary["dataset"],
                 summary["encoder"],
                 summary["method"],
+                "-" if num_euler_steps is None else str(num_euler_steps),
                 str(summary["k_shot"]),
                 str(summary["num_runs"]),
                 _format_accuracy_cell(summary),
+                _format_delta_cell(summary),
             ]
         )
 
@@ -99,5 +123,7 @@ def generate_pdf_report(
     _add_figure_section(
         story, styles, "Feature-space visualizations (t-SNE)", feature_space_figure_paths or []
     )
+    for heading, figure_paths in extra_figure_sections or []:
+        _add_figure_section(story, styles, heading, figure_paths)
 
     SimpleDocTemplate(str(save_path), pagesize=letter).build(story)
