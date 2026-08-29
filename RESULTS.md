@@ -256,26 +256,26 @@ Each flow-matching run reuses the *same* K-shot subset, seed and class prototype
 
 ## Stage 2: metrics along the flow
 
-### dtd (K=10) / dinov2_vits14
+### dtd / dinov2_vits14 (K=10)
 
-![dtd (K=10) dinov2_vits14](reports/figures/stage2_per_step_dtd_dinov2_vits14_k10.png)
+![dtd dinov2_vits14 (K=10)](reports/figures/stage2_per_step_dtd_dinov2_vits14_k10.png)
 
-### dtd (K=full) / dinov2_vits14
+### dtd / dinov2_vits14 (K=full)
 
-![dtd (K=full) dinov2_vits14](reports/figures/stage2_per_step_dtd_dinov2_vits14_kfull.png)
+![dtd dinov2_vits14 (K=full)](reports/figures/stage2_per_step_dtd_dinov2_vits14_kfull.png)
 
-### dtd (K=10) / resnet18
+### dtd / resnet18 (K=10)
 
-![dtd (K=10) resnet18](reports/figures/stage2_per_step_dtd_resnet18_k10.png)
+![dtd resnet18 (K=10)](reports/figures/stage2_per_step_dtd_resnet18_k10.png)
 
-### dtd (K=full) / resnet18
+### dtd / resnet18 (K=full)
 
-![dtd (K=full) resnet18](reports/figures/stage2_per_step_dtd_resnet18_kfull.png)
+![dtd resnet18 (K=full)](reports/figures/stage2_per_step_dtd_resnet18_kfull.png)
 
-### flowers102 (K=10) / resnet18
+### flowers102 / resnet18 (K=10)
 
-![flowers102 (K=10) resnet18](reports/figures/stage2_per_step_flowers102_resnet18_k10.png)
+![flowers102 resnet18 (K=10)](reports/figures/stage2_per_step_flowers102_resnet18_k10.png)
 
-### flowers102 (K=full) / resnet18
+### flowers102 / resnet18 (K=full)
 
-![flowers102 (K=full) resnet18](reports/figures/stage2_per_step_flowers102_resnet18_kfull.png)
+![flowers102 resnet18 (K=full)](reports/figures/stage2_per_step_flowers102_resnet18_kfull.png)

@@ -17,6 +17,11 @@ cache/*
 outputs/*
 !outputs/.gitkeep
 
+# Generated presentation page (~4 MB of base64-embedded figures that are
+# already tracked individually under reports/figures/). Regenerate with
+# scripts/build_presentation.py.
+reports/stage2_presentation.html
+
 # OS
 .DS_Store
 Thumbs.db

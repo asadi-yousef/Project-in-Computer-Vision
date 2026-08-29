@@ -411,7 +411,7 @@ def generate_stage2_figures(
         for k_shot in PER_STEP_K_SHOTS:
             path = _plot_per_step(dataset, encoder, k_shot, cache_dir, output_dir, figures_dir, device)
             if path:
-                figures.per_step.append((f"{dataset} (K={k_shot})", encoder, path))
+                figures.per_step.append((dataset, f"{encoder} (K={k_shot})", path))
 
     return figures
 
