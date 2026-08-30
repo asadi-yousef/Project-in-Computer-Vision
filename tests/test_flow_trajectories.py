@@ -341,3 +341,63 @@ def test_wrong_number_of_prototype_arrays_raises(tmp_path):
         plot_flow_trajectories(
             panels, [prototype_2d], ids, prototype_ids, names, "t", tmp_path / "t.png"
         )
+
+
+def test_background_samples_are_drawn_behind_the_paths(tmp_path, monkeypatch):
+    # stage_2.pdf's optional item asks to compare samples and prototypes, so
+    # real test features have to appear alongside the reverse-flow paths.
+    figures = _capture_axes(monkeypatch)
+    panels, prototype_2d, ids, prototype_ids, names = _panel_inputs()
+    rng = np.random.default_rng(1)
+    background = [
+        (rng.normal(size=(30, 2)), [c for c in range(3) for _ in range(10)])
+        for _ in panels
+    ]
+
+    plot_flow_trajectories(
+        panels, prototype_2d, ids, prototype_ids, names, "title", tmp_path / "t.png",
+        background=background,
+    )
+
+    for axis in figures[0][1][0]:
+        # One faint collection per background class, drawn beneath everything.
+        background_layers = [c for c in axis.collections if c.get_zorder() == 1]
+        assert len(background_layers) == 3
+        assert all(c.get_alpha() < 0.5 for c in background_layers)
+
+
+def test_background_points_are_included_in_the_axis_limits(tmp_path, monkeypatch):
+    figures = _capture_axes(monkeypatch)
+    panels, prototype_2d, ids, prototype_ids, names = _panel_inputs()
+    far_away = np.array([[500.0, 500.0]])
+    background = [(far_away, [0]) for _ in panels]
+
+    plot_flow_trajectories(
+        panels, prototype_2d, ids, prototype_ids, names, "title", tmp_path / "t.png",
+        background=background,
+    )
+
+    assert figures[0][1][0][0].get_xlim()[1] > 400
+
+
+def test_background_is_optional(tmp_path, monkeypatch):
+    figures = _capture_axes(monkeypatch)
+    panels, prototype_2d, ids, prototype_ids, names = _panel_inputs()
+
+    plot_flow_trajectories(
+        panels, prototype_2d, ids, prototype_ids, names, "title", tmp_path / "t.png"
+    )
+
+    for axis in figures[0][1][0]:
+        assert not [c for c in axis.collections if c.get_zorder() == 1]
+
+
+def test_wrong_number_of_background_sets_raises(tmp_path):
+    panels, prototype_2d, ids, prototype_ids, names = _panel_inputs()
+    rng = np.random.default_rng(0)
+
+    with pytest.raises(ValueError, match="background sets"):
+        plot_flow_trajectories(
+            panels, prototype_2d, ids, prototype_ids, names, "t", tmp_path / "t.png",
+            background=[(rng.normal(size=(5, 2)), [0] * 5)],
+        )

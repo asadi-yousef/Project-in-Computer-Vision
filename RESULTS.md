@@ -160,7 +160,7 @@ Each flow-matching run reuses the *same* K-shot subset, seed and class prototype
 
 **The flow over-transports.** In every setting measured, accuracy along the flow peaks *before* t=1 and then declines, and the mean margin ends negative. Integrating to completion overshoots the point of best class separation. This is the clearest direction for further work, but note that picking a stopping time from these curves would be test-set selection; doing it properly would require the validation split.
 
-**Reverse flow separates the two variants sharply.** Integrating backwards from a prototype, standard FM produces a point that genuinely resembles real members of that class, while rolled-out FM diverges by orders of magnitude and produces a point carrying no class information. A one-step jump is not an invertible field.
+**Reverse flow separates the two variants sharply.** Integrating backwards from a prototype, standard FM produces a point that genuinely resembles real members of that class - it lands inside the cloud of real test features, at positive cosine similarity to them. Rolled-out FM diverges by orders of magnitude and lands at *negative* similarity to every class, so it is not a plausible sample of anything; it still preserves the relative class ordering on the ResNet-18 pairs and loses even that on DINOv2. A one-step jump is not an invertible field.
 
 ### Caveats
 

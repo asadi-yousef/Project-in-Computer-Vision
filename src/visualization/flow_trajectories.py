@@ -136,6 +136,7 @@ def plot_flow_trajectories(
     explained_variance_ratio: Sequence[float] = None,
     legend_title: str = None,
     share_limits: bool = True,
+    background: Sequence[Tuple[np.ndarray, Sequence[int]]] = None,
 ) -> None:
     """Draw each traced example's path from its original feature to its endpoint.
 
@@ -169,12 +170,22 @@ def plot_flow_trajectories(
             would otherwise squash the other panel to a single dot. When it
             is False the panels are no longer comparable by eye, so the
             magnitude difference must be reported some other way.
+        background: optional (points_2d, class_ids) per panel, drawn as faint
+            dots behind everything else. Used to place real test samples
+            beside the paths, so a reverse flow can be judged against the
+            actual class it claims to reconstruct rather than against nothing.
+            Must be projected in the same basis as that panel's paths.
 
     Raises:
-        ValueError: if no panels are given.
+        ValueError: if no panels are given, or `background` is given but does
+            not have one entry per panel.
     """
     if not panels:
         raise ValueError("panels is empty; nothing to plot")
+    if background is not None and len(background) != len(panels):
+        raise ValueError(
+            f"Got {len(background)} background sets for {len(panels)} panels"
+        )
 
     unique_class_ids = sorted(set(sample_class_ids))
     color_map = {class_id: plt.cm.tab10(i % 10) for i, class_id in enumerate(unique_class_ids)}
@@ -193,8 +204,12 @@ def plot_flow_trajectories(
                 f"Got {len(prototypes_per_panel)} prototype arrays for {len(panels)} panels"
             )
 
+    backgrounds = list(background) if background is not None else [None] * len(panels)
+
     all_points = np.concatenate(
-        [trajectory.reshape(-1, 2) for _, trajectory in panels] + prototypes_per_panel
+        [trajectory.reshape(-1, 2) for _, trajectory in panels]
+        + prototypes_per_panel
+        + [entry[0] for entry in backgrounds if entry is not None]
     )
     margin = 0.06 * (all_points.max(axis=0) - all_points.min(axis=0))
     lower = all_points.min(axis=0) - margin
@@ -207,9 +222,21 @@ def plot_flow_trajectories(
         x_label, y_label = "PC 1", "PC 2"
 
     labelled_classes = set()
-    for axis, (title, trajectory_2d), panel_prototypes in zip(
-        axes, panels, prototypes_per_panel
+    for axis, (title, trajectory_2d), panel_prototypes, panel_background in zip(
+        axes, panels, prototypes_per_panel, backgrounds
     ):
+        # Real samples go down first, faint, so the paths read on top of them.
+        if panel_background is not None:
+            points, point_class_ids = panel_background
+            point_class_ids = np.asarray(point_class_ids)
+            for class_id in sorted(set(point_class_ids.tolist())):
+                mask = point_class_ids == class_id
+                axis.scatter(
+                    points[mask, 0], points[mask, 1],
+                    color=color_map.get(class_id, "tab:gray"),
+                    marker=".", s=16, alpha=0.32, linewidths=0, zorder=1,
+                )
+
         for sample_index, class_id in enumerate(sample_class_ids):
             path = trajectory_2d[:, sample_index, :]
             color = color_map[class_id]

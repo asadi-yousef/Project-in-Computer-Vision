@@ -289,7 +289,15 @@ def _plot_reverse_flow(dataset, encoder, cache_dir, data_dir, output_dir, report
     class_ids = selection.class_ids[:TRAJECTORY_NUM_CLASSES]
     prototypes = data.prototypes[class_ids]
 
-    panels, prototypes_per_panel = [], []
+    # Real test features of the same classes, so the point a reverse flow
+    # generates can be judged against the class it claims to reconstruct
+    # rather than against an empty panel. stage_2.pdf's optional item asks to
+    # compare *samples and prototypes*, so the samples have to be on the plot.
+    keep = [i for i in selection.sample_indices if int(data.test_labels[i]) in set(class_ids)]
+    sample_features = data.test_features[keep]
+    sample_class_ids = data.test_labels[keep].tolist()
+
+    panels, prototypes_per_panel, backgrounds = [], [], []
     for method, label in [("fm_standard", "standard FM"), ("fm_rolled", "rolled-out FM")]:
         loaded = _load_checkpoint(
             _run_dir(output_dir, dataset, encoder, method, GEOMETRY_K_SHOT, GEOMETRY_EULER_STEPS, GEOMETRY_SEED)
@@ -304,7 +312,12 @@ def _plot_reverse_flow(dataset, encoder, cache_dir, data_dir, output_dir, report
         # Each panel gets its own PCA: a diverging reverse field can be
         # several orders of magnitude larger than a well-behaved one, and a
         # shared basis would then be chosen entirely by the diverging panel.
-        (projected,), projected_prototypes, ratio = project_trajectories([trajectory], prototypes)
+        # The real samples join that fit (as a one-state "trajectory") so they
+        # land in the same basis as the paths they are being compared against.
+        (projected, projected_samples), projected_prototypes, ratio = project_trajectories(
+            [trajectory, sample_features.unsqueeze(0)], prototypes
+        )
+        backgrounds.append((projected_samples[0], sample_class_ids))
         endpoint_norm = trajectory[-1].norm(dim=1).mean().item()
         panels.append(
             (
@@ -321,9 +334,13 @@ def _plot_reverse_flow(dataset, encoder, cache_dir, data_dir, output_dir, report
         panels, prototypes_per_panel, class_ids, class_ids, class_names,
         f"{dataset} / {encoder}: reverse flow from the class prototypes "
         f"(K={GEOMETRY_K_SHOT}, seed {GEOMETRY_SEED}, T={GEOMETRY_EULER_STEPS})"
+        "\nfaint dots are real test features of the same classes - does the generated point land among them?"
         "\neach panel has its own PCA basis and scale - not comparable by eye; see endpoint norms",
-        save_path, share_limits=False,
-        legend_title="Class\n(* = prototype / start, . = reverse step,\nX = generated point at t=0)",
+        save_path, share_limits=False, background=backgrounds,
+        legend_title=(
+            "Class\n(faint dot = real test image, * = prototype / start,\n"
+            ". = reverse step, X = generated point at t=0)"
+        ),
     )
     return save_path
 
@@ -561,8 +578,11 @@ def format_observations(
         "doing it properly would require the validation split.\n",
         "**Reverse flow separates the two variants sharply.** Integrating backwards "
         "from a prototype, standard FM produces a point that genuinely resembles real "
-        "members of that class, while rolled-out FM diverges by orders of magnitude "
-        "and produces a point carrying no class information. A one-step jump is not "
+        "members of that class - it lands inside the cloud of real test features, at "
+        "positive cosine similarity to them. Rolled-out FM diverges by orders of "
+        "magnitude and lands at *negative* similarity to every class, so it is not a "
+        "plausible sample of anything; it still preserves the relative class ordering "
+        "on the ResNet-18 pairs and loses even that on DINOv2. A one-step jump is not "
         "an invertible field.\n",
         "### Caveats\n",
         "- **The full-data settings are single runs.** Following the Stage 1 "
