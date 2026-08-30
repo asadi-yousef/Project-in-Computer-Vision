@@ -553,7 +553,7 @@ footer {
 
   <section class="block">
     <p class="eyebrow">Classification results</p>
-    <h2>Top-1 accuracy on the full official test split</h2>
+    <h2>Accuracy on the full official test split</h2>
     <p class="lede col">Each cell shows mean accuracy with its seed spread, and beneath it the
     change against that run&rsquo;s own paired baseline. Every flow-matching run reuses the
     identical K-shot subset, seed and prototypes as the Stage 1 prototype run it is compared
