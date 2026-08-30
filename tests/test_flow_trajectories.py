@@ -363,7 +363,9 @@ def test_background_samples_are_drawn_behind_the_paths(tmp_path, monkeypatch):
         # One faint collection per background class, drawn beneath everything.
         background_layers = [c for c in axis.collections if c.get_zorder() == 1]
         assert len(background_layers) == 3
-        assert all(c.get_alpha() < 0.5 for c in background_layers)
+        # Translucent and behind the paths, but still large enough to read.
+        assert all(c.get_alpha() < 1.0 for c in background_layers)
+        assert all(c.get_sizes()[0] >= 30 for c in background_layers)
 
 
 def test_background_points_are_included_in_the_axis_limits(tmp_path, monkeypatch):

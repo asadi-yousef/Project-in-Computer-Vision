@@ -334,11 +334,11 @@ def _plot_reverse_flow(dataset, encoder, cache_dir, data_dir, output_dir, report
         panels, prototypes_per_panel, class_ids, class_ids, class_names,
         f"{dataset} / {encoder}: reverse flow from the class prototypes "
         f"(K={GEOMETRY_K_SHOT}, seed {GEOMETRY_SEED}, T={GEOMETRY_EULER_STEPS})"
-        "\nfaint dots are real test features of the same classes - does the generated point land among them?"
+        "\ncoloured dots are real test features of the same classes - does the generated point land among them?"
         "\neach panel has its own PCA basis and scale - not comparable by eye; see endpoint norms",
         save_path, share_limits=False, background=backgrounds,
         legend_title=(
-            "Class\n(faint dot = real test image, * = prototype / start,\n"
+            "Class\n(dot = real test image, * = prototype / start,\n"
             ". = reverse step, X = generated point at t=0)"
         ),
     )

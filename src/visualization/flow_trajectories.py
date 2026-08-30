@@ -234,7 +234,7 @@ def plot_flow_trajectories(
                 axis.scatter(
                     points[mask, 0], points[mask, 1],
                     color=color_map.get(class_id, "tab:gray"),
-                    marker=".", s=16, alpha=0.32, linewidths=0, zorder=1,
+                    marker="o", s=46, alpha=0.5, linewidths=0, zorder=1,
                 )
 
         for sample_index, class_id in enumerate(sample_class_ids):
