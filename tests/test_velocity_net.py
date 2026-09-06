@@ -2,7 +2,12 @@ import pytest
 import torch
 import torch.nn as nn
 
-from src.flow_matching.velocity_net import VelocityNetwork
+from src.classifiers.linear_probe import LinearProbe
+from src.flow_matching.inference import euler_trajectory, euler_transport
+from src.flow_matching.velocity_net import (
+    VelocityNetwork,
+    build_near_identity_velocity_network,
+)
 from src.utils.seeding import set_seed
 
 
@@ -169,3 +174,136 @@ def test_time_length_mismatch_raises():
     net = VelocityNetwork(feature_dim=8, hidden_dims=[16])
     with pytest.raises(ValueError, match="time"):
         net(torch.randn(4, 8), torch.rand(3))
+
+
+# --- Stage 3: near-identity initialization (part_3.pdf) ---
+
+
+def test_near_identity_network_outputs_exactly_zero():
+    net = build_near_identity_velocity_network(feature_dim=16, hidden_dims=[32, 32])
+    features = torch.randn(9, 16) * 40.0  # raw-scale features, as Stage 3 uses
+
+    for time in (0.0, 0.25, 0.5, 0.999):
+        assert torch.equal(net(features, time), torch.zeros_like(features))
+
+
+def test_near_identity_network_keeps_the_architecture_unchanged():
+    # part_3.pdf requires the *same* velocity-network design as Stage 2;
+    # only the initialization may differ.
+    plain = VelocityNetwork(feature_dim=32, hidden_dims=[64, 64])
+    near_identity = build_near_identity_velocity_network(
+        feature_dim=32, hidden_dims=[64, 64]
+    )
+
+    assert type(near_identity) is VelocityNetwork
+    assert [type(layer) for layer in near_identity.net] == [
+        type(layer) for layer in plain.net
+    ]
+    assert near_identity.state_dict().keys() == plain.state_dict().keys()
+
+
+@pytest.mark.parametrize("num_steps", [1, 2, 4, 12])
+def test_euler_rollout_is_the_identity_at_initialization(num_steps):
+    # The property part_3.pdf actually asks for, stated directly.
+    net = build_near_identity_velocity_network(feature_dim=24, hidden_dims=[32, 32])
+    features = torch.randn(11, 24) * 47.0
+
+    with torch.no_grad():
+        transported = euler_transport(net, features, num_steps)
+
+    assert torch.equal(transported, features)
+
+
+def test_every_intermediate_state_is_the_original_feature():
+    # Not just the endpoint: nothing moves at any point along the rollout.
+    net = build_near_identity_velocity_network(feature_dim=8, hidden_dims=[16, 16])
+    features = torch.randn(5, 8) * 24.0
+
+    with torch.no_grad():
+        trajectory = euler_trajectory(net, features, num_steps=4)
+
+    assert trajectory.shape == (5, 5, 8)
+    for state in trajectory:
+        assert torch.equal(state, features)
+
+
+def test_only_the_final_layer_is_zeroed():
+    # A network zeroed throughout would be permanently stuck; the hidden
+    # layers must keep their ordinary initialization.
+    net = build_near_identity_velocity_network(feature_dim=16, hidden_dims=[32, 32])
+    linear_layers = [layer for layer in net.net if isinstance(layer, nn.Linear)]
+
+    for layer in linear_layers[:-1]:
+        assert layer.weight.abs().sum() > 0
+
+    assert torch.equal(linear_layers[-1].weight, torch.zeros_like(linear_layers[-1].weight))
+    assert torch.equal(linear_layers[-1].bias, torch.zeros_like(linear_layers[-1].bias))
+
+
+def test_the_complete_pipeline_reproduces_the_frozen_classifier_exactly():
+    # part_3.pdf's actual requirement: before Stage 3 training, the whole
+    # system z -> FM -> frozen classifier must behave like the linear probe.
+    set_seed(0)
+    classifier = LinearProbe(feature_dim=16, num_classes=5)
+    for parameter in classifier.parameters():
+        parameter.requires_grad_(False)
+
+    net = build_near_identity_velocity_network(feature_dim=16, hidden_dims=[32, 32])
+    features = torch.randn(20, 16) * 24.0
+
+    with torch.no_grad():
+        baseline_logits = classifier(features)
+        pipeline_logits = classifier(euler_transport(net, features, num_steps=4))
+
+    assert torch.equal(pipeline_logits, baseline_logits)
+
+
+def test_the_network_starts_training_immediately():
+    # The obvious worry about a zeroed output layer is that it cannot learn.
+    # It can: the final layer gets a real gradient at step 0, and every layer
+    # trains from step 1 onward.
+    set_seed(0)
+    net = build_near_identity_velocity_network(feature_dim=16, hidden_dims=[32, 32])
+    classifier = LinearProbe(feature_dim=16, num_classes=5)
+    for parameter in classifier.parameters():
+        parameter.requires_grad_(False)
+
+    features = torch.randn(12, 16) * 24.0
+    labels = torch.randint(0, 5, (12,))
+    optimizer = torch.optim.AdamW(net.parameters(), lr=1e-3)
+
+    first_layer = net.net[0]
+    final_layer = net.net[-1]
+    first_layer_grads = []
+
+    for _ in range(2):
+        loss = nn.functional.cross_entropy(
+            classifier(euler_transport(net, features, num_steps=4)), labels
+        )
+        optimizer.zero_grad()
+        loss.backward()
+        first_layer_grads.append(first_layer.weight.grad.abs().sum().item())
+        assert final_layer.weight.grad.abs().sum() > 0  # always a real gradient
+        optimizer.step()
+
+    assert first_layer_grads[0] == 0.0  # zeroed weight blocks the backward pass once
+    assert first_layer_grads[1] > 0.0  # and only once
+
+    with torch.no_grad():
+        moved = euler_transport(net, features, num_steps=4)
+    assert not torch.equal(moved, features)
+
+
+def test_stage_2_networks_are_not_near_identity():
+    # Guards the reason a separate builder exists: Stage 2's default
+    # initialization perturbs features noticeably before any training, so it
+    # could not have been reused for Stage 3.
+    set_seed(0)
+    net = VelocityNetwork(feature_dim=384, hidden_dims=[512, 512])
+    features = torch.randn(32, 384) * 47.0
+
+    with torch.no_grad():
+        displacement = (euler_transport(net, features, 4) - features).norm(dim=1).mean()
+
+    assert displacement > 0
+

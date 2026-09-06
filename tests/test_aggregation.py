@@ -212,3 +212,21 @@ def test_load_all_results_keeps_flow_matching_fields(tmp_path):
 
     assert record["num_euler_steps"] == 12
     assert record["delta_accuracy"] == pytest.approx(-0.07)
+
+
+def test_stage3_methods_sort_directly_after_the_linear_probe():
+    # The Stage 3 methods are compared against the linear probe, so they
+    # belong next to it - not sorted last as unknown methods would be, and
+    # not split apart by the Stage 2 prototype branch.
+    records = [
+        {"dataset": "dtd", "encoder": "dinov2_vits14", "method": m, "k_shot": 10,
+         "seed": 0, "test_accuracy": 0.5}
+        for m in ("prototype", "fm_cls_guided", "linear_probe", "fm_cls_rolled")
+    ]
+
+    summaries = aggregate_results(records)
+
+    assert [s["method"] for s in summaries] == [
+        "linear_probe", "fm_cls_rolled", "fm_cls_guided", "prototype",
+    ]
+

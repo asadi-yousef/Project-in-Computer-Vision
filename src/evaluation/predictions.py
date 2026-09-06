@@ -13,6 +13,7 @@ from typing import Tuple, Union
 import torch
 
 from src.classifiers.linear_probe import predict_linear_probe
+from src.classifiers.linear_probe_runner import linear_probe_run_dir
 from src.classifiers.prototype import compute_class_prototypes, predict_by_cosine_similarity
 from src.data.few_shot import sample_balanced_subset_indices
 from src.features.loading import load_validated_feature_cache
@@ -40,7 +41,7 @@ def get_linear_probe_test_predictions(
         cache_dir, dataset, encoder, "test"
     )
     checkpoint_path = (
-        Path(output_dir) / "linear_probe" / dataset / encoder / f"k{k_shot}" / f"seed{seed}" / "checkpoint.pt"
+        linear_probe_run_dir(output_dir, dataset, encoder, k_shot, seed) / "checkpoint.pt"
     )
     if not checkpoint_path.exists():
         raise FileNotFoundError(

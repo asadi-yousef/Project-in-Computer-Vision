@@ -17,6 +17,29 @@ from src.utils.config import ExperimentConfig, save_config
 from src.utils.run_metadata import build_run_metadata, save_run_metadata
 
 
+def run_subdir(dataset: str, encoder: str, k_shot, seed: int) -> Path:
+    """The per-run path tail shared by every method: `<dataset>/<encoder>/k<K>/seed<seed>`."""
+    return Path(dataset) / encoder / f"k{k_shot}" / f"seed{seed}"
+
+
+def linear_probe_run_dir(
+    output_dir: Union[str, Path], dataset: str, encoder: str, k_shot, seed: int
+) -> Path:
+    """Where a completed linear-probe run lives, from the outputs root.
+
+    Returns `<output_dir>/linear_probe/<dataset>/<encoder>/k<K>/seed<seed>`.
+
+    Note the asymmetry with `run_linear_probe_experiment`, which is handed
+    the *parent* of its run directory rather than the outputs root, and so
+    builds its path from `run_subdir` directly. Readers of completed runs -
+    the sweep's skip check, the confusion-matrix prediction helper, and
+    Stage 3's frozen-classifier loader - all start from the outputs root
+    and belong here. That layout used to be spelled out separately in each
+    of them.
+    """
+    return Path(output_dir) / "linear_probe" / run_subdir(dataset, encoder, k_shot, seed)
+
+
 def run_linear_probe_experiment(
     config: ExperimentConfig,
     cache_dir: Union[str, Path],
@@ -74,7 +97,9 @@ def run_linear_probe_experiment(
         device=device,
     )
 
-    run_dir = Path(output_dir) / config.dataset / config.encoder / f"k{config.k_shot}" / f"seed{config.seed}"
+    run_dir = Path(output_dir) / run_subdir(
+        config.dataset, config.encoder, config.k_shot, config.seed
+    )
     run_dir.mkdir(parents=True, exist_ok=True)
 
     save_config(config, run_dir / "config.yaml")

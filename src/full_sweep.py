@@ -13,7 +13,10 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 
-from src.classifiers.linear_probe_runner import run_linear_probe_experiment
+from src.classifiers.linear_probe_runner import (
+    linear_probe_run_dir,
+    run_linear_probe_experiment,
+)
 from src.classifiers.prototype_runner import run_prototype_experiment
 from src.features.pipeline import all_splits_cached, extract_and_cache_all_splits
 from src.flow_matching.runner import (
@@ -37,7 +40,7 @@ EULER_STEP_COUNTS: List[int] = list(VALID_EULER_STEPS)
 def linear_probe_result_path(
     output_dir: Union[str, Path], dataset: str, encoder: str, k_shot, seed: int
 ) -> Path:
-    return Path(output_dir) / "linear_probe" / dataset / encoder / f"k{k_shot}" / f"seed{seed}" / "result.json"
+    return linear_probe_run_dir(output_dir, dataset, encoder, k_shot, seed) / "result.json"
 
 
 def prototype_result_path(

@@ -9,6 +9,10 @@ output is an unbounded velocity vector, so the final layer has no activation.
 The same network definition serves standard FM and rolled-out training - only
 the training objective differs between them - and the same forward pass is
 used at inference by the Euler integrator.
+
+Stage 3 (part_3.pdf) reuses this exact architecture, as its spec requires,
+but needs a different initialization: see
+`build_near_identity_velocity_network` at the bottom of this module.
 """
 
 from typing import Sequence, Union
@@ -130,3 +134,70 @@ class VelocityNetwork(nn.Module):
             time, features.shape[0], features.device, features.dtype
         )
         return self.net(torch.cat([features, time_column], dim=1))
+
+
+def build_near_identity_velocity_network(
+    feature_dim: int, hidden_dims: Sequence[int] = (512, 512)
+) -> VelocityNetwork:
+    """Build a `VelocityNetwork` whose Euler rollout is exactly the identity.
+
+    part_3.pdf requires: "Initialize the FM close to identity so that, before
+    Stage 3 training, the complete system behaves approximately like the
+    original linear probe."
+
+    The network predicts a *velocity*, and each Euler step adds it to the
+    current state:
+
+        z_hat_{k+1} = z_hat_k + (1/T) * v_theta(z_hat_k, k/T)
+
+    so a network that outputs zero contributes nothing at every step and
+    leaves z_hat_T = z exactly - not approximately, for any T. Zeroing the
+    final linear layer's weight and bias is sufficient, since every path
+    through the network ends there.
+
+    Only that layer is zeroed. The earlier layers keep PyTorch's default
+    initialization, so the network already has varied hidden features to
+    build on the moment its output layer moves off zero - which happens on
+    the very first optimizer step. The gradient w.r.t. the final layer's
+    weight is (upstream gradient) x (hidden activation), and the hidden
+    activations are nonzero, so that layer updates immediately. Only the
+    gradient flowing *back into* the earlier layers vanishes at step 0,
+    because it passes through the zeroed weight; from step 1 onward every
+    layer trains normally. A network zeroed throughout would instead be
+    stuck permanently.
+
+    Stage 2's networks are deliberately left as they were. `VelocityNetwork`
+    keeps PyTorch's default initialization, which on DINOv2 features moves
+    each feature by roughly 6% of its norm before any training - harmless
+    when the flow's target is a fixed class prototype, but fatal to the
+    property this function exists to provide. Constructing Stage 3's network
+    through a separate builder rather than a flag on `VelocityNetwork` keeps
+    every already-completed Stage 2 run bit-reproducible.
+
+    Args:
+        feature_dim: D, the frozen encoder's feature dimension.
+        hidden_dims: widths of the hidden layers, in order.
+
+    Returns:
+        A `VelocityNetwork` that returns exactly zero for every input, so
+        `euler_transport(net, z, T)` returns `z` unchanged.
+
+    Raises:
+        TypeError: if the constructed network does not end in a linear
+            layer - which would mean the architecture changed underneath
+            this function and the zeroing no longer guarantees anything.
+        ValueError: propagated from `VelocityNetwork` for invalid dimensions.
+    """
+    model = VelocityNetwork(feature_dim, hidden_dims)
+
+    final_layer = model.net[-1]
+    if not isinstance(final_layer, nn.Linear):
+        raise TypeError(
+            "expected VelocityNetwork to end in nn.Linear, found "
+            f"{type(final_layer).__name__}; the near-identity guarantee "
+            "depends on zeroing that final layer"
+        )
+
+    nn.init.zeros_(final_layer.weight)
+    nn.init.zeros_(final_layer.bias)
+    return model

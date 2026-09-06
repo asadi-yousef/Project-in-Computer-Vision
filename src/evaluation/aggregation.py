@@ -23,11 +23,19 @@ import statistics
 from pathlib import Path
 from typing import List, Optional, Union
 
-# Display order for the accuracy table and plot legends: the Stage 1
-# baselines first (in their original order), then the Stage 2 methods after
-# the prototype baseline they are compared against. Alphabetical order would
-# put fm_rolled first, which reads backwards.
-METHOD_DISPLAY_ORDER = ("linear_probe", "prototype", "fm_standard", "fm_rolled")
+# Display order for the accuracy table and plot legends: every method sits
+# directly after the Stage 1 baseline it is compared against. The Stage 3
+# methods follow the linear probe, which is their baseline (part_3.pdf); the
+# Stage 2 methods follow the prototype baseline. Alphabetical order would put
+# fm_rolled first and split the Stage 3 pair, both of which read backwards.
+METHOD_DISPLAY_ORDER = (
+    "linear_probe",
+    "fm_cls_rolled",
+    "fm_cls_guided",
+    "prototype",
+    "fm_standard",
+    "fm_rolled",
+)
 
 
 def load_all_results(output_dir: Union[str, Path]) -> List[dict]:
