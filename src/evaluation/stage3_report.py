@@ -570,8 +570,9 @@ def format_stage3_observations(
         "strongest baseline. With three seeds this is an observation, not a "
         "demonstrated effect.\n",
         "- **Hyperparameters were selected on validation, which flatters the "
-        "reported test numbers slightly.** The search ranked 34 configurations per "
-        "strategy on mean validation delta with test held out; against an oracle "
+        "reported test numbers slightly.** The search ranked 34 configurations in "
+        "total - 24 for the classifier-guided strategy and 10 for the rolled-out "
+        "one - on mean validation delta with test held out; against an oracle "
         "selecting on test it gave up at most 0.15 points. Compared with the "
         "untuned defaults, tuning moved the mean test delta from +0.68 to +0.80, "
         "and only one of the four settings improved materially.\n",

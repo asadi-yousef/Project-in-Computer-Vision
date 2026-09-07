@@ -1,12 +1,16 @@
-# CVLAB Summer Project — Stages 1 and 2
+# CVLAB Summer Project — Stages 1, 2 and 3
 
 ## Project goal
 
 This repository implements a multi-stage computer-vision project built on **frozen
 pretrained encoders**. Stage 1 establishes reproducible classification baselines; Stage 2
-adds a flow-matching layer that transports a frozen feature toward its class prototype.
-The encoders are never fine-tuned at any stage — only the classifier and, in Stage 2, the
-velocity network are trained.
+adds a flow-matching layer that transports a frozen feature toward its class prototype;
+Stage 3 puts a flow-matching layer *before* Stage 1's trained linear classifier and asks
+whether it can reshape the frozen features into something that classifier handles better.
+
+The encoders are never fine-tuned at any stage. Stage 1 trains only the classifier, Stage 2
+only the velocity network, and Stage 3 only the velocity network — its classifier is Stage 1's
+own checkpoint, loaded and frozen.
 
 ## Stage 1 scope
 
@@ -51,6 +55,61 @@ Two Stage 2 conventions worth knowing:
 - **Training runs a fixed epoch budget and keeps the final weights.** Validation loss is
   logged for the stability curves but never used for selection, matching stage_2.pdf's
   request for stable training and a fair comparison rather than a tuned result.
+
+## Stage 3 scope
+
+Stage 3 keeps Stage 2's velocity network and Euler integrator but changes what the flow is
+for. The pipeline is
+
+```
+z --FM--> z_hat --frozen linear classifier--> s
+```
+
+where the classifier is the Stage 1 linear probe for the same dataset, encoder, K and seed —
+loaded from its checkpoint, verified against its published test accuracy, and frozen. Two
+training objectives are compared, both updating only the velocity network:
+
+1. **End-to-end rolled-out classification** (`fm_cls_rolled`) — run the full T-step Euler
+   rollout, score the endpoint with the frozen classifier, and backpropagate cross-entropy
+   through all T steps. Structurally Stage 2's rolled-out training with a different target.
+2. **Classifier-guided targets** (`fm_cls_guided`) — build a per-example target by taking a
+   gradient step on `z_hat` in feature space that reduces the frozen classifier's loss, then
+   train with Stage 2's standard FM loss using `z` as source and that target as endpoint.
+   Targets are periodically recomputed as the flow changes.
+
+part_3.pdf narrows the scope deliberately: **one representative encoder per dataset**
+(DINOv2 for DTD, ResNet-18 for Flowers-102), **one training-set size** (K=10), and **a single
+number of Euler steps** (T=4) used throughout. Three seeds, as in Stage 1.
+
+Four Stage 3 conventions worth knowing, each of which differs from Stage 2 for a reason:
+
+- **Features are *not* L2-normalized.** Stage 2 normalizes because its classifier is cosine
+  similarity, which is scale-invariant. Stage 1's linear probe is not, and was fitted to raw
+  features with norms of roughly 24 (ResNet-18) to 48 (DINOv2); normalizing here costs 2.5–4
+  accuracy points before training starts. `verify_stored_test_accuracy` fails the run if this
+  is ever violated.
+- **The flow is initialized to the exact identity.** part_3.pdf asks that the untrained system
+  behave like the original linear probe. Zeroing the velocity network's final layer makes it
+  predict zero velocity, so the Euler rollout returns `z` unchanged and the pipeline reproduces
+  the Stage 1 probe's logits bit for bit — every reported delta starts from precisely zero.
+  `build_near_identity_velocity_network` does this; Stage 2's default initialization moves
+  DINOv2 features by about 6% of their norm and is left alone.
+- **Checkpoints are selected by best validation accuracy**, as in Stage 1, rather than keeping
+  the final weights as Stage 2 does. Stage 3's pipeline has a meaningful validation accuracy,
+  and the unregularized objective degrades badly late in training without it. Selection runs
+  over the trained epochs only: including the untrained identity would clamp every delta at
+  `>= 0` and hide a result where the flow genuinely hurts.
+- **The classifier is frozen with `requires_grad=False`, not `no_grad` or `detach`.** Strategy 1
+  must backpropagate *through* the classifier to reach the flow; the other two would sever
+  that path and silently train nothing.
+
+One structural finding shapes the whole stage: because part_3.pdf requires reusing Stage 1's
+own training subset, and Stage 1 trained its probe on that subset to convergence, the frozen
+classifier already reaches **100% accuracy and a cross-entropy near 0.002** there. The
+classification objective therefore starts at its floor, and the cheapest remaining descent
+direction is to inflate feature magnitude rather than improve the representation. The
+displacement penalty part_3.pdf offers is what prevents that — unregularized, validation
+accuracy peaks within a few epochs and then falls below the untrained identity.
 
 ## Selected datasets and branch
 
@@ -131,6 +190,17 @@ python scripts/run_prototype.py --dataset dtd --encoder resnet18 --k-shot full
 `--seed` is required for `5`/`10` (selects the subset) and omitted for `full` (single run,
 no subset to select). Outputs are saved under `outputs/prototype/<dataset>/<encoder>/k<k>/`.
 
+**Stage 3** has no single-run script — its protocol is twelve runs, so it is driven by its
+own sweep (see below). To run one setting only, pass filters:
+
+```bash
+python scripts/run_stage3_experiments.py --methods fm_cls_guided --datasets dtd --seeds 0
+```
+
+Outputs land under `outputs/<method>/<dataset>/<encoder>/k10/T4/seed<seed>/`. The
+corresponding Stage 1 linear-probe run must already exist: Stage 3 loads that checkpoint
+rather than retraining an equivalent one.
+
 ## Running all experiments
 
 To run the entire Stage 1 and Stage 2 protocol in one go (feature extraction for anything
@@ -153,6 +223,23 @@ standard-FM setting is only skipped when *every* T is already present, since a
 half-finished setting has no per-T training to resume from. On a laptop GPU the whole
 Stage 2 grid takes roughly ten minutes.
 
+Stage 3 runs separately, after Stage 1 is complete:
+
+```bash
+python scripts/tune_stage3.py               # hyperparameter search (~40 min on a laptop GPU)
+python scripts/run_stage3_experiments.py    # the twelve reported runs (~3 min)
+```
+
+The search is optional to re-run — its outcome is already recorded in
+`STAGE3_SELECTED_HYPERPARAMS` in `src/utils/config.py`, and the full results in
+`reports/stage3_tuning.json`. It exists because part_3.pdf names specific knobs to
+experiment with and asks that changes be "clearly described and justified experimentally",
+so the search table is a reportable result rather than a private tuning artifact. It trains
+34 configurations x 3 seeds x 2 datasets and ranks them on **mean validation delta**, with
+test accuracy computed for the report but never used for ranking.
+
+Both scripts skip completed work; `--force` re-runs it.
+
 ### Repetition protocol
 
 Stage 1 uses two different run counts for the full-data setting, and Stage 2 follows the one
@@ -162,7 +249,12 @@ belonging to the branch it extends:
 |---|---|---|---|
 | linear probe | 3 subset seeds | 3 subset seeds | 3 initialization seeds |
 | prototype | 3 subset seeds | 3 subset seeds | **1 run** |
-| flow matching | 3 subset seeds | 3 subset seeds | **1 run** |
+| flow matching (Stage 2) | 3 subset seeds | 3 subset seeds | **1 run** |
+| Stage 3 | — | 3 subset seeds | — |
+
+Stage 3 runs only at K=10 (part_3.pdf: "one training-set size for the main experiments"), and
+follows the linear probe it extends: three seeds, each pairing with the Stage 1 checkpoint
+trained on that seed's own subset.
 
 stage_1.pdf specifies 3 initialization seeds for the full linear probe but states that "the
 full-data result requires one run" for the image-prototype branch. Stage 2 extends the
@@ -198,9 +290,28 @@ the flow. Everything is recomputed from the saved velocity-network checkpoints, 
 training is repeated. Missing runs are skipped with a message rather than failing the
 report, so a partially-completed sweep still produces output.
 
-The written **Observations** section of `RESULTS.md` derives its counted claims from the
-aggregated summaries rather than hardcoding them, so the prose cannot drift out of step with
-the tables if the sweep is re-run.
+The same command also builds the Stage 3 section: the main three-way comparison table
+(linear probe vs. both Stage 3 methods, with the change relative to baseline), training and
+selection diagnostics, a class-separation table, training curves, a three-panel feature-space
+comparison, and the hyperparameter search.
+
+Two Stage 3 figures differ from their Stage 2 counterparts by design. The training-curve
+figure gives each strategy's objective its own axis, because the two minimize different
+quantities — a classification cross-entropy and a squared velocity error — and marks both the
+untrained pipeline's accuracy and the selected epoch, so the gap between them is what Stage 3
+contributed. The feature-space projection is fitted on **unnormalized** features and draws no
+prototypes, because Stage 3's classifier is a hyperplane rather than a set of reference points
+and is not scale-invariant.
+
+Because a two-dimensional projection can only suggest an answer to the question part_3.pdf
+poses of that figure — how each strategy changes the class structure — the section also reports
+a Fisher-style class-separation ratio measured in the **full** feature space, on the same
+samples the figure plots.
+
+The written **Observations** sections of `RESULTS.md` derive their counted claims from the
+aggregated summaries and measurements rather than hardcoding them, so the prose cannot drift
+out of step with the tables if the sweep is re-run. That includes which method won: the Stage 3
+ranking sentence branches on the measured result rather than asserting a fixed reading.
 
 Feature-space plots reuse the same 10 classes and 150 test samples per dataset across every
 encoder trained on it (selection stored in `reports/feature_viz_selection_<dataset>.json` for
@@ -216,7 +327,7 @@ tests/             # test suite (pytest)
 data/              # raw datasets (gitignored - regenerate via scripts/verify_dataset_splits.py --download)
 cache/             # cached frozen-encoder features (gitignored - regenerate via scripts/extract_features.py)
 outputs/           # per-run configs, checkpoints, history, results (gitignored - regenerate via scripts/run_all_experiments.py)
-reports/           # aggregated summary.{json,csv}, figures/, feature_viz_selection_*.json (tracked - small, final numbers)
+reports/           # aggregated summary.{json,csv}, figures/, feature_viz_selection_*.json, stage3_tuning.json (tracked - small, final numbers)
 RESULTS.md         # generated results report (tracked)
 RESULTS.pdf        # same report as a PDF (tracked)
 ```
@@ -233,7 +344,14 @@ outputs/linear_probe/<dataset>/<encoder>/k<k>/seed<n>/
 outputs/prototype/<dataset>/<encoder>/k<k>/{seed<n>|single_run}/
 outputs/fm_standard/<dataset>/<encoder>/k<k>/T<steps>/{seed<n>|single_run}/
 outputs/fm_rolled/<dataset>/<encoder>/k<k>/T<steps>/{seed<n>|single_run}/
+outputs/fm_cls_rolled/<dataset>/<encoder>/k10/T4/seed<n>/
+outputs/fm_cls_guided/<dataset>/<encoder>/k10/T4/seed<n>/
 ```
+
+Stage 3 reuses the same layout helper as Stage 2, so its runs sit alongside them in the same
+shape and the report pipeline walks them identically. All four files are written by one shared
+`save_run_artifacts`, which is also what the linear probe uses — a new stage cannot
+accidentally produce directories the report cannot read.
 
 Every flow-matching run directory is self-contained — `config.yaml`, `history.json`,
 `result.json` and `checkpoint.pt` — so every Stage 2 figure can be rebuilt from the saved
@@ -261,6 +379,16 @@ the same checkpoint, because that objective does not depend on T.
   prototypes a flow-matching run trains against reproduce the corresponding Stage 1 run's
   stored test accuracy to within 1e-9, using the real cache and outputs when present. If the
   subsets or prototypes ever drift apart, the comparison stops being valid and this fails.
+- **Stage 1 / Stage 3 comparability**: every Stage 3 run calls `verify_stored_test_accuracy`
+  before training, re-scoring the loaded Stage 1 checkpoint on the test split and refusing to
+  continue unless it reproduces the accuracy Stage 1 published. This catches the failure modes
+  that would otherwise be invisible and would quietly invalidate the stage: the wrong seed's
+  checkpoint, a rebuilt feature cache, or features prepared differently here than they were
+  then — notably L2-normalizing them, which `tests/test_frozen_probe.py` asserts is rejected.
+- **Stage 3 near-identity initialization**: `tests/test_velocity_net.py` asserts that the
+  untrained rollout returns its input exactly, for several T, and that the full pipeline's
+  logits equal the frozen classifier's. On the real checkpoints the pipeline reproduces every
+  stored Stage 1 accuracy with `max|dlogit| = 0`.
 
 ## Common errors
 
@@ -271,6 +399,17 @@ the same checkpoint, because that objective does not depend on T.
 - **`ValueError: dinov2_vits14 is only used on 'dtd' in this project`** — intentional: this
   project scoped DINOv2 to DTD only (see `src/utils/config.py`). Not a bug; pass
   `--encoder resnet18` for Flowers-102.
+- **`FileNotFoundError: No Stage 1 checkpoint at ...`** when running Stage 3 — Stage 3 reuses
+  Stage 1's trained classifier rather than retraining one, so that run must exist first. Run
+  `scripts/run_all_experiments.py` (or `scripts/run_linear_probe.py` for the single setting).
+- **`ValueError: Frozen probe from ... would be invalid`** — the loaded Stage 1 checkpoint no
+  longer reproduces its stored test accuracy. Usually means the feature cache was rebuilt since
+  Stage 1 ran, or features are being prepared differently (Stage 3 must use raw, unnormalized
+  features). This is an intentional guard, not a bug: continuing would make every Stage 3 delta
+  meaningless.
+- **`KeyError: No Stage 3 selection recorded for (...)`** — `stage3_hyperparams_for` was asked
+  for a (method, dataset) pair the search never covered. Run `scripts/tune_stage3.py`, or check
+  the pair against `STAGE3_SELECTED_HYPERPARAMS` in `src/utils/config.py`.
 - **`UserWarning: xFormers is not available`** when building `DINOv2Encoder` — harmless. DINOv2
   falls back to a native (non-xFormers) attention implementation; this project doesn't depend on
   xFormers to keep dependencies minimal.

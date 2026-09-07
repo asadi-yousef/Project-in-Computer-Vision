@@ -340,7 +340,7 @@ The feature-space figures below are two-dimensional projections; this table meas
 
 - **The gains are small relative to the seed spread.** Deltas range from +0.20 to +1.05 points while the per-seed standard deviation reaches 0.87 on DTD's classifier-guided runs. On DTD one seed gained +0.05 where the other two gained +1.44 and +1.65; that seed also started from the strongest baseline. With three seeds this is an observation, not a demonstrated effect.
 
-- **Hyperparameters were selected on validation, which flatters the reported test numbers slightly.** The search ranked 34 configurations per strategy on mean validation delta with test held out; against an oracle selecting on test it gave up at most 0.15 points. Compared with the untuned defaults, tuning moved the mean test delta from +0.68 to +0.80, and only one of the four settings improved materially.
+- **Hyperparameters were selected on validation, which flatters the reported test numbers slightly.** The search ranked 34 configurations in total - 24 for the classifier-guided strategy and 10 for the rolled-out one - on mean validation delta with test held out; against an oracle selecting on test it gave up at most 0.15 points. Compared with the untuned defaults, tuning moved the mean test delta from +0.68 to +0.80, and only one of the four settings improved materially.
 
 - **Two selected configurations sit on a grid boundary.** Both classifier-guided selections took the smallest step size searched, and the Flowers-102 one took the largest refresh interval, so the optimum may lie outside the range explored.
 
