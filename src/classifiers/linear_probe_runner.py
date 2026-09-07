@@ -3,8 +3,6 @@ restrict to a K-shot subset if applicable, train, evaluate on test exactly
 once, and save every output the spec requires alongside the config.
 """
 
-import dataclasses
-import json
 from pathlib import Path
 from typing import Union
 
@@ -13,8 +11,8 @@ import torch
 from src.classifiers.linear_probe import evaluate_linear_probe, train_linear_probe
 from src.data.few_shot import sample_balanced_subset_indices
 from src.features.loading import load_validated_feature_cache
-from src.utils.config import ExperimentConfig, save_config
-from src.utils.run_metadata import build_run_metadata, save_run_metadata
+from src.utils.config import ExperimentConfig
+from src.utils.run_metadata import save_run_artifacts
 
 
 def run_subdir(dataset: str, encoder: str, k_shot, seed: int) -> Path:
@@ -100,21 +98,18 @@ def run_linear_probe_experiment(
     run_dir = Path(output_dir) / run_subdir(
         config.dataset, config.encoder, config.k_shot, config.seed
     )
-    run_dir.mkdir(parents=True, exist_ok=True)
-
-    save_config(config, run_dir / "config.yaml")
-
-    with open(run_dir / "history.json", "w") as f:
-        json.dump([dataclasses.asdict(epoch_log) for epoch_log in result.history], f, indent=2)
-
-    metadata = build_run_metadata(config, device)
-    metadata["result"] = {
-        "test_accuracy": test_accuracy,
-        "best_val_accuracy": result.best_val_accuracy,
-        "best_epoch": result.best_epoch,
-    }
-    save_run_metadata(metadata, run_dir / "result.json")
-    torch.save(result.best_state_dict, run_dir / "checkpoint.pt")
+    save_run_artifacts(
+        config,
+        run_dir,
+        result.best_state_dict,
+        result.history,
+        {
+            "test_accuracy": test_accuracy,
+            "best_val_accuracy": result.best_val_accuracy,
+            "best_epoch": result.best_epoch,
+        },
+        device,
+    )
 
     return {
         "test_accuracy": test_accuracy,

@@ -1,0 +1,1546 @@
+[
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 0.03,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.00443259874979655,
+    "std_val_delta": 0.0031167190154005636,
+    "mean_test_delta": 0.0019503434499104817,
+    "std_test_delta": 0.001868013026127375,
+    "mean_test_accuracy": 0.6877659360567728,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      150,
+      128,
+      105
+    ],
+    "mean_displacement": 1.918821891148885
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 0.0,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0033687750498453775,
+    "std_val_delta": 0.0022145256256146154,
+    "mean_test_delta": -0.001063843568166097,
+    "std_test_delta": 0.0042553246021618625,
+    "mean_test_accuracy": 0.6847517490386963,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      136,
+      146,
+      154
+    ],
+    "mean_displacement": 1.9572391510009766
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 0.1,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0028368631998697915,
+    "std_val_delta": 0.002729559614993572,
+    "mean_test_delta": 0.0021276473999023438,
+    "std_test_delta": 0.002437526315557117,
+    "mean_test_accuracy": 0.6879432400067648,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      130,
+      134,
+      60
+    ],
+    "mean_displacement": 1.3089499870936077
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 0.1,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0028368631998697915,
+    "std_val_delta": 0.002729559614993572,
+    "mean_test_delta": -1.9868214925130207e-08,
+    "std_test_delta": 0.0024375523292608863,
+    "mean_test_accuracy": 0.6858155727386475,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      176,
+      50,
+      93
+    ],
+    "mean_displacement": 2.6095624764760337
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 0.03,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.002482255299886068,
+    "std_val_delta": 0.0030245788117803374,
+    "mean_test_delta": 0.0015957355499267578,
+    "std_test_delta": 0.001917835449113884,
+    "mean_test_accuracy": 0.6874113281567892,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      156,
+      100,
+      53
+    ],
+    "mean_displacement": 1.216260512669881
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 0.3,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0021276473999023438,
+    "std_val_delta": 0.0029615598424610565,
+    "mean_test_delta": -0.001241147518157959,
+    "std_test_delta": 0.0016250240474560225,
+    "mean_test_accuracy": 0.6845744450887045,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      188,
+      32,
+      1
+    ],
+    "mean_displacement": 1.218066136042277
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 0.3,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0014184315999348958,
+    "std_val_delta": 0.0034197147445321533,
+    "mean_test_delta": -0.001241147518157959,
+    "std_test_delta": 0.0021497010647579594,
+    "mean_test_accuracy": 0.6845744450887045,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      11,
+      199,
+      138
+    ],
+    "mean_displacement": 0.9448236425717672
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 1.0,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0007092157999674479,
+    "std_val_delta": 0.0022145256256146154,
+    "mean_test_delta": -0.0033687949180603027,
+    "std_test_delta": 0.005111180365643017,
+    "mean_test_accuracy": 0.6824467976888021,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      190,
+      22,
+      136
+    ],
+    "mean_displacement": 1.6868971188863118
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 0.0,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0007091959317525228,
+    "std_val_delta": 0.00341974873846192,
+    "mean_test_delta": -0.001241147518157959,
+    "std_test_delta": 0.003378111153964434,
+    "mean_test_accuracy": 0.6845744450887045,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      2,
+      4,
+      4
+    ],
+    "mean_displacement": 3.353010416030884
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "displacement_penalty": 1.0,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.00035460789998372394,
+    "std_val_delta": 0.002677230934316165,
+    "mean_test_delta": -0.0030141870180765786,
+    "std_test_delta": 0.0017098790049736227,
+    "mean_test_accuracy": 0.6828014055887858,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      117,
+      22,
+      1
+    ],
+    "mean_displacement": 0.9321673711140951
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 0.1,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.011437912782033285,
+    "std_val_delta": 0.0034430309688008613,
+    "mean_test_delta": 0.00932401418685913,
+    "std_test_delta": 0.000802216854726284,
+    "mean_test_accuracy": 0.8414918382962545,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      24,
+      40,
+      178
+    ],
+    "mean_displacement": 1.2622774442036946
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 0.03,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.010457515716552734,
+    "std_val_delta": 0.003151505762087051,
+    "mean_test_delta": 0.009866098562876383,
+    "std_test_delta": 0.0017389180898261386,
+    "mean_test_accuracy": 0.8420339226722717,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      136,
+      47,
+      58
+    ],
+    "mean_displacement": 1.3256884217262268
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 0.0,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.010130703449249268,
+    "std_val_delta": 0.0037117163877197234,
+    "mean_test_delta": 0.009866118431091309,
+    "std_test_delta": 0.0015110715201206413,
+    "mean_test_accuracy": 0.8420339425404867,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      118,
+      47,
+      194
+    ],
+    "mean_displacement": 1.3600207169850667
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 0.1,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.009477118651072184,
+    "std_val_delta": 0.0040817025671050665,
+    "mean_test_delta": 0.010787685712178549,
+    "std_test_delta": 0.002500111446067131,
+    "mean_test_accuracy": 0.8429555098215739,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      109,
+      47,
+      66
+    ],
+    "mean_displacement": 1.430197815100352
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 0.3,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.009477118651072184,
+    "std_val_delta": 0.001497576919128573,
+    "mean_test_delta": 0.00910721222559611,
+    "std_test_delta": 0.0005863588634330744,
+    "mean_test_accuracy": 0.8412750363349915,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      109,
+      23,
+      165
+    ],
+    "mean_displacement": 1.0373118718465169
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 0.03,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.009150326251983643,
+    "std_val_delta": 0.006303067150597775,
+    "mean_test_delta": 0.010082940260569254,
+    "std_test_delta": 0.003046833889656684,
+    "mean_test_accuracy": 0.8422507643699646,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      146,
+      51,
+      64
+    ],
+    "mean_displacement": 2.0959477027257285
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 0.3,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.008169929186503092,
+    "std_val_delta": 0.0005660210387486794,
+    "mean_test_delta": 0.00829404592514038,
+    "std_test_delta": 0.0019717699007737385,
+    "mean_test_accuracy": 0.8404618700345358,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      113,
+      23,
+      11
+    ],
+    "mean_displacement": 1.3125629027684529
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 1.0,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.006535947322845459,
+    "std_val_delta": 0.0011320592842684963,
+    "mean_test_delta": 0.0061256686846415205,
+    "std_test_delta": 0.0013638628712037352,
+    "mean_test_accuracy": 0.8382934927940369,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      164,
+      40,
+      92
+    ],
+    "mean_displacement": 0.6935908794403076
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 1.0,
+      "velocity_penalty": 0.1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.006535947322845459,
+    "std_val_delta": 0.0005660554515063854,
+    "mean_test_delta": 0.005420962969462077,
+    "std_test_delta": 0.000993660976564581,
+    "mean_test_accuracy": 0.8375887870788574,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      88,
+      176,
+      152
+    ],
+    "mean_displacement": 0.6050139466921488
+  },
+  {
+    "method": "fm_cls_rolled",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "displacement_penalty": 0.0,
+      "velocity_penalty": 0.0
+    },
+    "num_seeds": 3,
+    "mean_val_delta": -0.0016339818636576335,
+    "std_val_delta": 0.0040817025671050665,
+    "mean_test_delta": -0.0008131066958109537,
+    "std_test_delta": 0.002406678757593338,
+    "mean_test_accuracy": 0.8313547174135844,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      1,
+      1,
+      1
+    ],
+    "mean_displacement": 0.7456337809562683
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01613473892211914,
+    "std_val_delta": 0.004767481024475483,
+    "mean_test_delta": 0.010460972785949707,
+    "std_test_delta": 0.008664375867152421,
+    "mean_test_accuracy": 0.6962765653928121,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      17,
+      86,
+      48
+    ],
+    "mean_displacement": 12.575128237406412
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.015957434972127277,
+    "std_val_delta": 0.00507414377112839,
+    "mean_test_delta": 0.009574453035990397,
+    "std_test_delta": 0.006664867297499796,
+    "mean_test_accuracy": 0.6953900456428528,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      78,
+      49
+    ],
+    "mean_displacement": 8.91415786743164
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.015780131022135418,
+    "std_val_delta": 0.0039923100534813225,
+    "mean_test_delta": 0.004787226517995198,
+    "std_test_delta": 0.006536264068927146,
+    "mean_test_accuracy": 0.6906028191248575,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      4,
+      200,
+      200
+    ],
+    "mean_displacement": 205.4102233250936
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.015248199303944906,
+    "std_val_delta": 0.0021496961483798947,
+    "mean_test_delta": 0.007978697617848715,
+    "std_test_delta": 0.005923146448237183,
+    "mean_test_accuracy": 0.6937942902247111,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      123,
+      5
+    ],
+    "mean_displacement": 59.73183528582255
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.014893591403961182,
+    "std_val_delta": 0.0014073064744436984,
+    "mean_test_delta": 0.009929060935974121,
+    "std_test_delta": 0.0016250435574605663,
+    "mean_test_accuracy": 0.6957446535428365,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      9,
+      16
+    ],
+    "mean_displacement": 6.939525683720906
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01471628745396932,
+    "std_val_delta": 0.0021496961483798947,
+    "mean_test_delta": 0.007269501686096191,
+    "std_test_delta": 0.0040625698729239886,
+    "mean_test_accuracy": 0.6930850942929586,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      136,
+      113,
+      26
+    ],
+    "mean_displacement": 7.306677500406901
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01471628745396932,
+    "std_val_delta": 0.005883238389050279,
+    "mean_test_delta": 0.008510629336039225,
+    "std_test_delta": 0.007835577136494111,
+    "mean_test_accuracy": 0.6943262219429016,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      25,
+      61,
+      108
+    ],
+    "mean_displacement": 8.809032122294107
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.014538963635762533,
+    "std_val_delta": 0.005247751933539597,
+    "mean_test_delta": 0.006028354167938232,
+    "std_test_delta": 0.00726086167902513,
+    "mean_test_accuracy": 0.6918439467748007,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      12,
+      16,
+      20
+    ],
+    "mean_displacement": 5.164942741394043
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.014361679553985596,
+    "std_val_delta": 0.0023185500009153467,
+    "mean_test_delta": 0.011347512404123941,
+    "std_test_delta": 0.008745642403221399,
+    "mean_test_accuracy": 0.6971631050109863,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      98,
+      6
+    ],
+    "mean_displacement": 72.80623658498128
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.014361679553985596,
+    "std_val_delta": 0.005604098481320698,
+    "mean_test_delta": 0.007801413536071777,
+    "std_test_delta": 0.005587215051308525,
+    "mean_test_accuracy": 0.6936170061429342,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      12,
+      11,
+      128
+    ],
+    "mean_displacement": 20.787713686625164
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.014184375603993734,
+    "std_val_delta": 0.00030709944976855635,
+    "mean_test_delta": 0.006914893786112468,
+    "std_test_delta": 0.00372340423730041,
+    "mean_test_accuracy": 0.6927304863929749,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      3,
+      68
+    ],
+    "mean_displacement": 13.170398394266764
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.014007071654001871,
+    "std_val_delta": 0.0020137857627042788,
+    "mean_test_delta": 0.00904254118601481,
+    "std_test_delta": 0.005753514613115667,
+    "mean_test_accuracy": 0.6948581337928772,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      192,
+      6
+    ],
+    "mean_displacement": 40.92611265182495
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.013829747835795084,
+    "std_val_delta": 0.006134340299153237,
+    "mean_test_delta": 0.009574453035990397,
+    "std_test_delta": 0.005553342731350858,
+    "mean_test_accuracy": 0.6953900456428528,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      43,
+      83,
+      85
+    ],
+    "mean_displacement": 5.981127421061198
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.013475159804026285,
+    "std_val_delta": 0.0011072628128073077,
+    "mean_test_delta": 0.006382981936136882,
+    "std_test_delta": 0.0028146354774457602,
+    "mean_test_accuracy": 0.6921985745429993,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      3,
+      4
+    ],
+    "mean_displacement": 7.374374548594157
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.013297855854034424,
+    "std_val_delta": 0.001917835449113884,
+    "mean_test_delta": 0.010283668835957846,
+    "std_test_delta": 0.005380832761774855,
+    "mean_test_accuracy": 0.6960992614428202,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      5,
+      52
+    ],
+    "mean_displacement": 5.7971720695495605
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.013297835985819498,
+    "std_val_delta": 0.0051296061107266,
+    "mean_test_delta": 0.011524816354115805,
+    "std_test_delta": 0.005027434664807115,
+    "mean_test_accuracy": 0.6973404089609782,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      30,
+      16,
+      61
+    ],
+    "mean_displacement": 8.206295490264893
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.013120551904042562,
+    "std_val_delta": 0.0026238588490074986,
+    "mean_test_delta": 0.006560285886128743,
+    "std_test_delta": 0.007260834752095762,
+    "mean_test_accuracy": 0.6923758784929911,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      83,
+      101,
+      105
+    ],
+    "mean_displacement": 6.742092132568359
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0129432479540507,
+    "std_val_delta": 0.0020137857627042788,
+    "mean_test_delta": 0.007978717486063639,
+    "std_test_delta": 0.005923146448237183,
+    "mean_test_accuracy": 0.693794310092926,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      8,
+      6
+    ],
+    "mean_displacement": 8.98570728302002
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.012411336104075113,
+    "std_val_delta": 0.0016250175437047447,
+    "mean_test_delta": 0.0054964423179626465,
+    "std_test_delta": 0.004913625609054608,
+    "mean_test_accuracy": 0.6913120349248251,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      144,
+      181,
+      147
+    ],
+    "mean_displacement": 4.409290552139282
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.011347512404123941,
+    "std_val_delta": 0.00030709944976855635,
+    "mean_test_delta": 0.009397149085998535,
+    "std_test_delta": 0.003736054339418738,
+    "mean_test_accuracy": 0.695212741692861,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      3,
+      4
+    ],
+    "mean_displacement": 9.318756103515625
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.011347492535909018,
+    "std_val_delta": 0.0054331565353909735,
+    "mean_test_delta": 0.003014167149861654,
+    "std_test_delta": 0.007221735929998202,
+    "mean_test_accuracy": 0.688829759756724,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      86,
+      10
+    ],
+    "mean_displacement": 116.11297448476155
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01117020845413208,
+    "std_val_delta": 0.0014073064744436984,
+    "mean_test_delta": 0.0067375898361206055,
+    "std_test_delta": 0.004942332125839149,
+    "mean_test_accuracy": 0.692553182442983,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      3,
+      173
+    ],
+    "mean_displacement": 21.26789124806722
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.010638296604156494,
+    "std_val_delta": 0.0005319118499755859,
+    "mean_test_delta": 0.007269501686096191,
+    "std_test_delta": 0.0026238447522150578,
+    "mean_test_accuracy": 0.6930850942929586,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      2,
+      8,
+      15
+    ],
+    "mean_displacement": 11.62695344289144
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.010638296604156494,
+    "std_val_delta": 0.0014073064744436984,
+    "mean_test_delta": 0.0062056779861450195,
+    "std_test_delta": 0.004460911530099386,
+    "mean_test_accuracy": 0.6920212705930074,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      3,
+      3,
+      4
+    ],
+    "mean_displacement": 9.537521998087565
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01895427703857422,
+    "std_val_delta": 0.005744576001768904,
+    "mean_test_delta": 0.01019136110941569,
+    "std_test_delta": 0.003389269108867317,
+    "mean_test_accuracy": 0.842359185218811,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      75,
+      80,
+      41
+    ],
+    "mean_displacement": 2.7686628500620523
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.018627464771270752,
+    "std_val_delta": 0.0035348581138051447,
+    "mean_test_delta": 0.01008296012878418,
+    "std_test_delta": 0.006721099946630561,
+    "mean_test_accuracy": 0.8422507842381796,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      23,
+      28,
+      31
+    ],
+    "mean_displacement": 2.634913126627604
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01830067237218221,
+    "std_val_delta": 0.0037117032680372766,
+    "mean_test_delta": 0.008565107981363932,
+    "std_test_delta": 0.005506176480860759,
+    "mean_test_accuracy": 0.8407329320907593,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      146,
+      48,
+      58
+    ],
+    "mean_displacement": 2.8185370763142905
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01797387997309367,
+    "std_val_delta": 0.0022641357743274173,
+    "mean_test_delta": 0.008185625076293945,
+    "std_test_delta": 0.0038564811303616795,
+    "mean_test_accuracy": 0.8403534491856893,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      32,
+      26,
+      13
+    ],
+    "mean_displacement": 3.1001458962758384
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.017647087574005127,
+    "std_val_delta": 0.003921568393707275,
+    "mean_test_delta": 0.0015720923741658528,
+    "std_test_delta": 0.00458352472167308,
+    "mean_test_accuracy": 0.8337399164835612,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      14,
+      16,
+      22
+    ],
+    "mean_displacement": 5.008949438730876
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.017647087574005127,
+    "std_val_delta": 0.0029411911964416504,
+    "mean_test_delta": 0.008348246415456137,
+    "std_test_delta": 0.004352654160786291,
+    "mean_test_accuracy": 0.8405160705248514,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      18,
+      16,
+      8
+    ],
+    "mean_displacement": 3.3635147412618003
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01666667064030965,
+    "std_val_delta": 0.001960784196929133,
+    "mean_test_delta": 0.010354002316792807,
+    "std_test_delta": 0.001106996517241119,
+    "mean_test_accuracy": 0.8425218264261881,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      16,
+      22,
+      31
+    ],
+    "mean_displacement": 2.713900168736776
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01633987824122111,
+    "std_val_delta": 0.003962238219245552,
+    "mean_test_delta": 0.0063425103823343916,
+    "std_test_delta": 0.001917381794973969,
+    "mean_test_accuracy": 0.8385103344917297,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      32,
+      25,
+      20
+    ],
+    "mean_displacement": 3.024874289830526
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01601308584213257,
+    "std_val_delta": 0.003151505762087051,
+    "mean_test_delta": 0.009703497091929117,
+    "std_test_delta": 0.007541353212369724,
+    "mean_test_accuracy": 0.8418713212013245,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      44,
+      14,
+      18
+    ],
+    "mean_displacement": 3.1258382002512612
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.015686293443044026,
+    "std_val_delta": 0.0016980975290037444,
+    "mean_test_delta": 0.01040820280710856,
+    "std_test_delta": 0.0026172452394887004,
+    "mean_test_accuracy": 0.8425760269165039,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      76,
+      49,
+      42
+    ],
+    "mean_displacement": 2.2421868642171225
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.015686293443044026,
+    "std_val_delta": 0.0033961606452497825,
+    "mean_test_delta": 0.006505151589711507,
+    "std_test_delta": 0.0023956475603273894,
+    "mean_test_accuracy": 0.8386729756991068,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      15,
+      17,
+      11
+    ],
+    "mean_displacement": 2.7649797598520913
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.015032688776652018,
+    "std_val_delta": 0.004420825116823577,
+    "mean_test_delta": 0.005746205647786458,
+    "std_test_delta": 0.00383586324375557,
+    "mean_test_accuracy": 0.8379140297571818,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      23,
+      12,
+      22
+    ],
+    "mean_displacement": 4.65581997235616
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.014705916245778402,
+    "std_val_delta": 0.00545860021620453,
+    "mean_test_delta": 0.003361006577809652,
+    "std_test_delta": 0.0036594310781395472,
+    "mean_test_accuracy": 0.835528830687205,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      15,
+      15,
+      5
+    ],
+    "mean_displacement": 4.42144759496053
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.013398687044779459,
+    "std_val_delta": 0.0020408512835525332,
+    "mean_test_delta": 0.00937823454538981,
+    "std_test_delta": 0.0024841686998537797,
+    "mean_test_accuracy": 0.8415460586547852,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      88,
+      103,
+      170
+    ],
+    "mean_displacement": 1.7431710561116536
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.013071894645690918,
+    "std_val_delta": 0.0037117163877197234,
+    "mean_test_delta": -0.0009215275446573893,
+    "std_test_delta": 0.008248197333115494,
+    "mean_test_accuracy": 0.8312462965647379,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      44,
+      12,
+      22
+    ],
+    "mean_displacement": 8.972227414449057
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.012418309847513834,
+    "std_val_delta": 0.009622495309758375,
+    "mean_test_delta": 0.0018973549207051594,
+    "std_test_delta": 0.0054530976705968225,
+    "mean_test_accuracy": 0.8340651790301005,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      15,
+      19,
+      3
+    ],
+    "mean_displacement": 3.1400941212972007
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.012091517448425293,
+    "std_val_delta": 0.004836174484632603,
+    "mean_test_delta": 0.0027647018432617188,
+    "std_test_delta": 0.0018755269127747089,
+    "mean_test_accuracy": 0.8349325259526571,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      7,
+      5,
+      19
+    ],
+    "mean_displacement": 4.606717030207316
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.05,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.010784327983856201,
+    "std_val_delta": 0.007401803945903826,
+    "mean_test_delta": 0.00010844071706136067,
+    "std_test_delta": 0.004272910917784672,
+    "mean_test_accuracy": 0.8322762648264567,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      7,
+      2,
+      9
+    ],
+    "mean_displacement": 3.6619162559509277
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.007516344388326009,
+    "std_val_delta": 0.0020408751445570627,
+    "mean_test_delta": -0.0020599365234375,
+    "std_test_delta": 0.0030784815984219484,
+    "mean_test_accuracy": 0.8301078875859579,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      4,
+      9,
+      3
+    ],
+    "mean_displacement": 3.402423620223999
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.006209154923756917,
+    "std_val_delta": 0.007092360609380854,
+    "mean_test_delta": -0.006288270155588786,
+    "std_test_delta": 0.0011422534073071522,
+    "mean_test_accuracy": 0.8258795539538065,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      7,
+      6,
+      12
+    ],
+    "mean_displacement": 6.007725715637207
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.003594775994618734,
+    "std_val_delta": 0.0020408751445570627,
+    "mean_test_delta": -0.004824618498484294,
+    "std_test_delta": 0.003508146381577665,
+    "mean_test_accuracy": 0.827343205610911,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      2,
+      6,
+      1
+    ],
+    "mean_displacement": 3.6282456715901694
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.003267983595530192,
+    "std_val_delta": 0.0024672877190433638,
+    "mean_test_delta": -0.005041460196177165,
+    "std_test_delta": 0.0037510434887800194,
+    "mean_test_accuracy": 0.8271263639132181,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      2,
+      1,
+      1
+    ],
+    "mean_displacement": 2.7728776137034097
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.2,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.002941171328226725,
+    "std_val_delta": 0.001960784196929133,
+    "mean_test_delta": -0.005312502384185791,
+    "std_test_delta": 0.0032943206370804664,
+    "mean_test_accuracy": 0.8268553217252096,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      1,
+      1,
+      1
+    ],
+    "mean_displacement": 2.784810463587443
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.1,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0003268122673034668,
+    "std_val_delta": 0.0037117163877197234,
+    "mean_test_delta": -0.0020599365234375,
+    "std_test_delta": 0.00289247254257177,
+    "mean_test_accuracy": 0.8301078875859579,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      1,
+      4,
+      1
+    ],
+    "mean_displacement": 2.7750694354375205
+  }
+]

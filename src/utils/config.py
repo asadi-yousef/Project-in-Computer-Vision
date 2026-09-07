@@ -69,6 +69,56 @@ STAGE3_NUM_EULER_STEPS = 4
 # The unregularized setting is kept as a reported ablation.
 STAGE3_DISPLACEMENT_PENALTY = 0.1
 
+# part_3.pdf: "choose one representative image encoder for each dataset".
+# Flowers-102 has only ResNet-18 in this project; DTD uses DINOv2 ViT-S/14,
+# the encoder the Stage 1 report already treats as representative for it.
+STAGE3_SETTINGS = {
+    "dtd": "dinov2_vits14",
+    "flowers102": "resnet18",
+}
+
+# part_3.pdf: "one training-set size for the main experiments. A reasonable
+# default is K = 10."
+STAGE3_K_SHOT = 10
+
+# Repetitions, following stage_1.pdf's "run each training-set size 3 times".
+# Each seed selects its own K-shot subset *and* pairs with the Stage 1
+# checkpoint trained on that subset, so every delta is a paired comparison.
+STAGE3_SEEDS = [0, 1, 2]
+
+# The configurations selected by the search in `src.flow_matching.stage3_tuning`,
+# run over 34 configurations x 3 seeds x 2 datasets (204 trainings) and saved
+# in full to reports/stage3_tuning.json.
+#
+# Selection was on mean validation delta across the three seeds, with test
+# accuracy computed but never ranked on. Measured against an oracle that
+# picked on test instead, this cost at most 0.15 accuracy points in any of
+# the four settings.
+#
+# Selections are per dataset. part_3.pdf requires fixed choices when
+# comparing methods *within* a dataset, which this respects; a single shared
+# configuration across both datasets was also evaluated and costs about 0.1
+# points on average.
+#
+# Caveat worth carrying into the report: both `fm_cls_guided` selections took
+# the smallest `target_step_size` offered, and the Flowers-102 one took the
+# largest `target_refresh_epochs`. The optimum may lie outside the searched
+# range in those directions.
+STAGE3_SELECTED_HYPERPARAMS = {
+    # val +0.44%, test +0.20%
+    ("fm_cls_rolled", "dtd"): {"displacement_penalty": 0.03, "velocity_penalty": 0.0},
+    # val +1.14%, test +0.93%
+    ("fm_cls_rolled", "flowers102"): {"displacement_penalty": 0.1, "velocity_penalty": 0.1},
+    # val +1.61%, test +1.05%
+    ("fm_cls_guided", "dtd"): {
+        "target_step_size": 0.02, "target_num_steps": 1, "target_refresh_epochs": 1,
+    },
+    # val +1.90%, test +1.02%
+    ("fm_cls_guided", "flowers102"): {
+        "target_step_size": 0.02, "target_num_steps": 3, "target_refresh_epochs": 20,
+    },
+}
+
 # DINOv2 was only selected for DTD (Task 0 decision), not Flowers-102.
 DINOV2_DATASET = "dtd"
 
@@ -245,6 +295,37 @@ class Stage3Hyperparams:
                 f"got {self.target_refresh_epochs}"
             )
 
+
+
+def stage3_hyperparams_for(
+    method: str, dataset: str, base: "Stage3Hyperparams" = None
+) -> "Stage3Hyperparams":
+    """The Stage 3 configuration selected for one (method, dataset).
+
+    Applies `STAGE3_SELECTED_HYPERPARAMS` on top of `base`, so everything the
+    search held fixed - architecture, optimizer, epoch budget, T - comes from
+    the dataclass defaults and only the searched knobs are overridden.
+
+    Args:
+        method: a Stage 3 method name.
+        dataset: the dataset the selection was made on.
+        base: settings to override. Defaults to `Stage3Hyperparams()`.
+
+    Returns:
+        A new `Stage3Hyperparams`.
+
+    Raises:
+        KeyError: if no selection was recorded for this pair, which means the
+            search has not been run for it.
+    """
+    if (method, dataset) not in STAGE3_SELECTED_HYPERPARAMS:
+        raise KeyError(
+            f"No Stage 3 selection recorded for {(method, dataset)}; "
+            f"known pairs are {sorted(STAGE3_SELECTED_HYPERPARAMS)}. "
+            "Run scripts/tune_stage3.py first."
+        )
+    base = base if base is not None else Stage3Hyperparams()
+    return dataclasses.replace(base, **STAGE3_SELECTED_HYPERPARAMS[(method, dataset)])
 
 @dataclasses.dataclass
 class ExperimentConfig:

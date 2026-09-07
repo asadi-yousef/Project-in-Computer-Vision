@@ -1,9 +1,15 @@
-"""Run-metadata stamping: capture everything needed to reproduce a result.
+"""Run-metadata stamping and artifact writing: capture everything needed to
+reproduce a result.
 
 The spec requires storing experiment configuration alongside every result.
 Config alone isn't quite enough to explain a result months later, so this
 also records the exact code version (git commit), library versions, and
 when the run happened.
+
+`save_run_artifacts` owns the run-directory layout every stage shares -
+config.yaml, history.json, result.json, checkpoint.pt - so the linear probe,
+the Stage 2 flow-matching runs and the Stage 3 runs all produce directories
+the same readers can walk.
 """
 
 import dataclasses
@@ -66,3 +72,58 @@ def save_run_metadata(metadata: dict, path: Union[str, Path]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(metadata, f, indent=2, default=str)
+
+
+def save_run_artifacts(
+    config: Any,
+    run_dir: Union[str, Path],
+    state_dict: dict,
+    history: list,
+    result_fields: dict,
+    device: torch.device,
+) -> Path:
+    """Write one run's four standard artifacts, creating the directory.
+
+    Every runner in this project - linear probe, Stage 2 flow matching,
+    Stage 3 - writes the same four files, and the aggregation and reporting
+    code walks `outputs/` expecting exactly that. Keeping the layout in one
+    place means a new stage cannot accidentally produce directories the
+    report pipeline cannot read.
+
+    Args:
+        config: the run's `ExperimentConfig`, saved as config.yaml and
+            embedded in result.json's metadata.
+        run_dir: where to write. Created if absent.
+        state_dict: model weights, saved as checkpoint.pt. Which weights
+            these are is the caller's decision and differs by stage: Stage 1
+            and Stage 3 save the best-validation checkpoint, Stage 2 the
+            final one.
+        history: per-epoch log dataclasses, saved as history.json.
+        result_fields: the run's headline numbers, placed under
+            result.json's "result" key.
+        device: recorded in the metadata.
+
+    Returns:
+        The run directory.
+    """
+    # Imported here rather than at module scope: config.py is a heavier
+    # import than this module's other dependencies, and every caller of the
+    # metadata helpers above does not need it.
+    from src.utils.config import save_config
+
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    save_config(config, run_dir / "config.yaml")
+
+    with open(run_dir / "history.json", "w") as f:
+        json.dump([dataclasses.asdict(entry) for entry in history], f, indent=2)
+
+    metadata = build_run_metadata(config, device)
+    metadata["result"] = result_fields
+    save_run_metadata(metadata, run_dir / "result.json")
+
+    torch.save(state_dict, run_dir / "checkpoint.pt")
+
+    return run_dir
+

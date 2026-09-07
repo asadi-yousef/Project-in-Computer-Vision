@@ -21,7 +21,6 @@ numbers untouched.
 """
 
 import dataclasses
-import json
 from pathlib import Path
 from typing import Dict, List, Sequence, Union
 
@@ -41,9 +40,8 @@ from src.utils.config import (
     FLOW_MATCHING_METHODS,
     VALID_EULER_STEPS,
     ExperimentConfig,
-    save_config,
 )
-from src.utils.run_metadata import build_run_metadata, save_run_metadata
+from src.utils.run_metadata import save_run_artifacts
 
 
 @dataclasses.dataclass
@@ -187,19 +185,19 @@ def _save_run(
     result_fields: dict,
     device: torch.device,
 ) -> None:
-    """Write config, history, result metadata, and checkpoint for one run."""
-    run_dir.mkdir(parents=True, exist_ok=True)
+    """Write config, history, result metadata, and checkpoint for one run.
 
-    save_config(config, run_dir / "config.yaml")
-
-    with open(run_dir / "history.json", "w") as f:
-        json.dump([dataclasses.asdict(entry) for entry in train_result.history], f, indent=2)
-
-    metadata = build_run_metadata(config, device)
-    metadata["result"] = result_fields
-    save_run_metadata(metadata, run_dir / "result.json")
-
-    torch.save(train_result.final_state_dict, run_dir / "checkpoint.pt")
+    Stage 2 saves the *final* weights rather than a best-epoch checkpoint;
+    see `FlowMatchingTrainResult`.
+    """
+    save_run_artifacts(
+        config,
+        run_dir,
+        train_result.final_state_dict,
+        train_result.history,
+        result_fields,
+        device,
+    )
 
 
 def _result_fields(
