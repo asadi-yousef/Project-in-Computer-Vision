@@ -122,6 +122,8 @@ def plot_delta_vs_shot(
     encoder: str,
     save_path: Union[str, Path],
     title: Optional[str] = None,
+    methods: Optional[List[str]] = None,
+    baseline_label: str = "prototype baseline",
 ) -> None:
     """Plot the change in accuracy relative to the prototype baseline.
 
@@ -131,22 +133,32 @@ def plot_delta_vs_shot(
     offset. Plotting the paired delta directly puts that effect on its own
     axis, against a zero reference line.
 
-    Only settings that carry a delta (the FM methods) are plotted.
+    Only settings that carry a delta are plotted, and `methods` restricts
+    which of those. That restriction matters rather than being cosmetic: a
+    delta is meaningful only against the baseline the zero line represents,
+    and this project has two. Stage 2's methods are measured against the
+    prototype baseline and Stage 3's against the linear probe, so mixing them
+    on one axis would put two different zeros on the same figure.
 
     Args:
         summaries: aggregated results from aggregation.aggregate_results().
         dataset, encoder: which pair to plot.
         save_path: where to save the PNG.
         title: override the default plot title.
+        methods: restrict to these methods. Defaults to every method that
+            carries a delta, which is only safe when the caller knows a
+            single baseline is in play.
+        baseline_label: what the zero line is labelled as.
 
     Raises:
-        ValueError: if no flow-matching summaries match the request.
+        ValueError: if no matching summaries carry a delta.
     """
     relevant_summaries = [
         s for s in summaries
         if s["dataset"] == dataset
         and s["encoder"] == encoder
         and s.get("mean_delta_accuracy") is not None
+        and (methods is None or s["method"] in methods)
     ]
     if not relevant_summaries:
         raise ValueError(
@@ -159,7 +171,7 @@ def plot_delta_vs_shot(
     )
 
     fig, ax = plt.subplots(figsize=(7, 5), dpi=150)
-    ax.axhline(0.0, color="black", linewidth=1.2, label="prototype baseline")
+    ax.axhline(0.0, color="black", linewidth=1.2, label=baseline_label)
 
     for method, num_euler_steps in series_keys:
         series_summaries = sorted(

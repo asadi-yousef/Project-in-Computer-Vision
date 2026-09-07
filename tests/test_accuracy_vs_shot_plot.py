@@ -191,3 +191,92 @@ def test_delta_plot_shows_only_flow_matching_series_plus_a_zero_reference(tmp_pa
 def test_delta_plot_raises_without_flow_matching_results(tmp_path):
     with pytest.raises(ValueError, match="flow-matching"):
         plot_delta_vs_shot(_synthetic_summaries(), "dtd", "resnet18", tmp_path / "d.png")
+
+
+# --- the delta plot's baseline must match the methods on it ---
+
+
+def _mixed_stage_summaries():
+    """Stage 2 and Stage 3 deltas for one setting.
+
+    They are measured against different baselines - the prototype classifier
+    and the linear probe respectively - so they must never share an axis
+    whose zero line represents only one of them.
+    """
+    def summary(method, delta, num_euler_steps=4):
+        return {
+            "dataset": "dtd", "encoder": "dinov2_vits14", "method": method,
+            "k_shot": 10, "num_euler_steps": num_euler_steps, "num_runs": 3,
+            "mean_test_accuracy": 0.7, "std_test_accuracy": 0.01,
+            "mean_delta_accuracy": delta, "std_delta_accuracy": 0.002,
+            "seed_accuracies": {},
+        }
+
+    return [
+        summary("fm_standard", -0.03),
+        summary("fm_rolled", -0.07),
+        summary("fm_cls_rolled", 0.002),
+        summary("fm_cls_guided", 0.010),
+    ]
+
+
+def _plotted_series_labels(monkeypatch, **kwargs):
+    captured = []
+    original = Axes.errorbar
+
+    def spy(self, *args, **inner):
+        captured.append(inner.get("label"))
+        return original(self, *args, **inner)
+
+    monkeypatch.setattr(Axes, "errorbar", spy)
+    plot_delta_vs_shot(_mixed_stage_summaries(), "dtd", "dinov2_vits14", **kwargs)
+    plt.close("all")
+    return captured
+
+
+def test_the_delta_plot_can_be_restricted_to_one_stages_methods(monkeypatch, tmp_path):
+    # Regression test. Without the filter, adding Stage 3 runs to outputs/
+    # silently put linear-probe-relative series onto the Stage 2 figure,
+    # whose zero line is the prototype baseline.
+    labels = _plotted_series_labels(
+        monkeypatch,
+        save_path=tmp_path / "stage2.png",
+        methods=["fm_standard", "fm_rolled"],
+    )
+
+    assert labels
+    assert all("fm_cls" not in (label or "") for label in labels)
+
+
+def test_the_delta_plot_shows_every_method_when_unrestricted(monkeypatch, tmp_path):
+    labels = _plotted_series_labels(monkeypatch, save_path=tmp_path / "all.png")
+
+    assert any("fm_cls" in (label or "") for label in labels)
+
+
+def test_the_baseline_line_can_be_relabelled(monkeypatch, tmp_path):
+    captured = {}
+    original = Axes.axhline
+
+    def spy(self, *args, **kwargs):
+        captured["label"] = kwargs.get("label")
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Axes, "axhline", spy)
+    plot_delta_vs_shot(
+        _mixed_stage_summaries(), "dtd", "dinov2_vits14",
+        save_path=tmp_path / "f.png", methods=["fm_cls_guided"],
+        baseline_label="linear-probe baseline",
+    )
+    plt.close("all")
+
+    assert captured["label"] == "linear-probe baseline"
+
+
+def test_restricting_to_a_method_with_no_results_raises(tmp_path):
+    with pytest.raises(ValueError, match="No flow-matching results"):
+        plot_delta_vs_shot(
+            _mixed_stage_summaries(), "dtd", "dinov2_vits14",
+            save_path=tmp_path / "f.png", methods=["prototype"],
+        )
+

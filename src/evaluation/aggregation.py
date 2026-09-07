@@ -16,6 +16,12 @@ The Euler-step count is part of the key because Stage 2 evaluates each FM
 method at T in {4, 12}, and those are distinct results that must not be
 averaged together. It is None for the Stage 1 methods, which have no T, so
 Stage 1 records aggregate exactly as they did before.
+
+`aggregate_results` covers test accuracy and the paired delta, which is all
+Stages 1 and 2 report. Stage 3 runs additionally record how far the flow
+moved the features, which epoch was selected, and the validation improvement
+over the untrained identity; `summarize_stage3_runs` averages those, since
+they are Stage 3-specific and would be None for every other record.
 """
 
 import json
@@ -63,6 +69,12 @@ def load_all_results(output_dir: Union[str, Path]) -> List[dict]:
             record.setdefault(optional_key, None)
         records.append(record)
     return records
+
+
+# The three conditions part_3.pdf's main comparison puts side by side:
+# "Stage 1 linear probe; end-to-end rolled-out classification training;
+# classifier-guided FM training."
+STAGE3_COMPARISON_METHODS = ("linear_probe", "fm_cls_rolled", "fm_cls_guided")
 
 
 def method_label(method: str, num_euler_steps: Optional[int]) -> str:
@@ -174,3 +186,69 @@ def aggregate_results(records: List[dict]) -> List[dict]:
         )
     )
     return summaries
+
+
+def summarize_stage3_runs(records: List[dict]) -> List[dict]:
+    """Average the Stage 3-only fields the general aggregator does not touch.
+
+    These support the observations rather than the required accuracy table:
+    how far the flow actually moved the features, which epoch validation
+    selected, and how much validation improved over the untrained identity.
+    The displacement in particular is the diagnostic for a flow that improves
+    its objective by inflating feature magnitude instead of by improving the
+    representation.
+
+    Args:
+        records: flat records from `load_all_results`. Records without
+            Stage 3's fields are ignored, so this can be handed the whole
+            outputs directory.
+
+    Returns:
+        One dict per (dataset, encoder, method, k_shot) group, sorted like
+        the accuracy table. Each has num_runs, mean_val_delta,
+        std_val_delta, mean_displacement, mean_initial_val_accuracy,
+        mean_best_val_accuracy and best_epochs (per seed, seed-ordered).
+    """
+    groups = {}
+    for record in records:
+        if record.get("test_mean_displacement") is None:
+            continue
+        key = (record["dataset"], record["encoder"], record["method"], record["k_shot"])
+        groups.setdefault(key, []).append(record)
+
+    summaries = []
+    for (dataset, encoder, method, k_shot), group in groups.items():
+        group = sorted(group, key=lambda record: record["seed"])
+        val_deltas = [record["val_delta_accuracy"] for record in group]
+        summaries.append(
+            {
+                "dataset": dataset,
+                "encoder": encoder,
+                "method": method,
+                "k_shot": k_shot,
+                "num_runs": len(group),
+                "mean_val_delta": statistics.mean(val_deltas),
+                "std_val_delta": _sample_std(val_deltas),
+                "mean_initial_val_accuracy": statistics.mean(
+                    record["initial_val_accuracy"] for record in group
+                ),
+                "mean_best_val_accuracy": statistics.mean(
+                    record["best_val_accuracy"] for record in group
+                ),
+                "mean_displacement": statistics.mean(
+                    record["test_mean_displacement"] for record in group
+                ),
+                "best_epochs": [record["best_epoch"] for record in group],
+            }
+        )
+
+    return sorted(
+        summaries,
+        key=lambda summary: (
+            summary["dataset"],
+            summary["encoder"],
+            _method_sort_key(summary["method"]),
+            _k_shot_sort_key(summary["k_shot"]),
+        ),
+    )
+

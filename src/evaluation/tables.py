@@ -1,8 +1,12 @@
 """Render aggregated results (see aggregation.py) as Markdown tables."""
 
-from typing import List, Optional
+from typing import List, Optional, Sequence, Tuple
 
-from src.evaluation.aggregation import METHOD_DISPLAY_ORDER, method_label
+from src.evaluation.aggregation import (
+    METHOD_DISPLAY_ORDER,
+    STAGE3_COMPARISON_METHODS,
+    method_label,
+)
 
 
 def _format_percentage(mean: float, std: Optional[float], signed: bool = False) -> str:
@@ -97,8 +101,95 @@ def format_flow_matching_comparison_table(summaries: List[dict], dataset: str, e
     return header + "\n".join(rows) + "\n"
 
 
+def format_stage3_comparison_table(
+    summaries: List[dict], settings: Sequence[Tuple[str, str]], k_shot=10
+) -> str:
+    """Render part_3.pdf's main comparison: one row per dataset, three methods.
+
+    part_3.pdf asks to compare, for each of the two datasets, the Stage 1
+    linear probe against both Stage 3 methods, and to "also report the change
+    relative to the corresponding linear-probe baseline". The general
+    accuracy table spreads those three conditions across three rows per
+    dataset; this puts them side by side, baseline first.
+
+    Every method within a row uses the same encoder, training subset and
+    pretrained classifier, as part_3.pdf requires - that is a property of how
+    the runs were produced, not of this renderer, but it is what makes the
+    row comparable at all.
+
+    Settings absent from `summaries` render as "n/a" rather than raising, so
+    a partially-completed sweep still produces a readable table.
+
+    Args:
+        summaries: aggregated summaries from `aggregate_results`.
+        settings: the (dataset, encoder) pairs to show, one row each.
+        k_shot: the training-set size Stage 3 used.
+    """
+    by_setting = {
+        (s["dataset"], s["encoder"], s["method"]): s
+        for s in summaries
+        if s["k_shot"] == k_shot
+    }
+
+    header = "| Dataset | Encoder | " + " | ".join(STAGE3_COMPARISON_METHODS) + " |\n"
+    header += "|---" * (len(STAGE3_COMPARISON_METHODS) + 2) + "|\n"
+
+    rows = []
+    for dataset, encoder in settings:
+        cells = []
+        for method in STAGE3_COMPARISON_METHODS:
+            summary = by_setting.get((dataset, encoder, method))
+            if summary is None:
+                cells.append("n/a")
+                continue
+            text = _format_percentage(
+                summary["mean_test_accuracy"], summary["std_test_accuracy"]
+            )
+            mean_delta = summary.get("mean_delta_accuracy")
+            if mean_delta is not None:
+                text += f" ({mean_delta * 100:+.2f})"
+            cells.append(text)
+        rows.append(f"| {dataset} | {encoder} | " + " | ".join(cells) + " |")
+
+    return header + "\n".join(rows) + "\n"
+
+
+def format_stage3_diagnostics_table(stage3_summaries: List[dict]) -> str:
+    """Render the Stage 3-only measurements from `summarize_stage3_runs`.
+
+    Supporting evidence for the observations rather than a required
+    deliverable. The displacement column is the one to read alongside the
+    accuracy: a flow that gains accuracy while moving features a small
+    fraction of their own norm is doing something different from one that
+    moves them further than they are long.
+    """
+    if not stage3_summaries:
+        return "_No Stage 3 runs._"
+
+    header = (
+        "| Dataset | Method | Runs | Baseline val | Best val | Val delta "
+        "| Selected epochs | Mean displacement |\n"
+    )
+    header += "|---" * 8 + "|\n"
+
+    rows = []
+    for summary in stage3_summaries:
+        rows.append(
+            f"| {summary['dataset']} | {summary['method']} | {summary['num_runs']} "
+            f"| {summary['mean_initial_val_accuracy'] * 100:.2f}% "
+            f"| {summary['mean_best_val_accuracy'] * 100:.2f}% "
+            f"| {_format_percentage(summary['mean_val_delta'], summary['std_val_delta'], signed=True)} "
+            f"| {summary['best_epochs']} "
+            f"| {summary['mean_displacement']:.2f} |"
+        )
+
+    return header + "\n".join(rows) + "\n"
+
+
 __all__ = [
     "METHOD_DISPLAY_ORDER",
     "format_accuracy_table",
     "format_flow_matching_comparison_table",
+    "format_stage3_comparison_table",
+    "format_stage3_diagnostics_table",
 ]

@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from src.evaluation.aggregation import aggregate_results, load_all_results, method_label
+from src.evaluation.aggregation import (
+    aggregate_results,
+    load_all_results,
+    method_label,
+    summarize_stage3_runs,
+)
 
 
 def _write_result(output_dir, dataset, encoder, method, k_shot, seed, test_accuracy):
@@ -229,4 +234,90 @@ def test_stage3_methods_sort_directly_after_the_linear_probe():
     assert [s["method"] for s in summaries] == [
         "linear_probe", "fm_cls_rolled", "fm_cls_guided", "prototype",
     ]
+
+
+# --- Stage 3 diagnostics ---
+
+
+def _stage3_record(method, seed, val_delta, displacement, best_epoch, dataset="dtd"):
+    return {
+        "dataset": dataset, "encoder": "dinov2_vits14", "method": method,
+        "k_shot": 10, "seed": seed, "test_accuracy": 0.7,
+        "baseline_test_accuracy": 0.69, "delta_accuracy": 0.01,
+        "num_euler_steps": 4,
+        "initial_val_accuracy": 0.68,
+        "best_val_accuracy": 0.68 + val_delta,
+        "val_delta_accuracy": val_delta,
+        "test_mean_displacement": displacement,
+        "best_epoch": best_epoch,
+    }
+
+
+def test_stage3_summary_averages_the_stage3_only_fields():
+    records = [
+        _stage3_record("fm_cls_guided", 0, 0.010, 5.0, 17),
+        _stage3_record("fm_cls_guided", 1, 0.020, 15.0, 86),
+        _stage3_record("fm_cls_guided", 2, 0.030, 10.0, 48),
+    ]
+
+    summaries = summarize_stage3_runs(records)
+
+    assert len(summaries) == 1
+    summary = summaries[0]
+    assert summary["num_runs"] == 3
+    assert summary["mean_val_delta"] == pytest.approx(0.02)
+    assert summary["std_val_delta"] == pytest.approx(0.01)
+    assert summary["mean_displacement"] == pytest.approx(10.0)
+    assert summary["mean_initial_val_accuracy"] == pytest.approx(0.68)
+
+
+def test_stage3_summary_ignores_records_without_stage3_fields():
+    # It is handed the whole outputs directory, which holds Stage 1 and
+    # Stage 2 runs too.
+    records = [
+        {"dataset": "dtd", "encoder": "resnet18", "method": "linear_probe",
+         "k_shot": 10, "seed": 0, "test_accuracy": 0.5},
+        _stage3_record("fm_cls_rolled", 0, 0.01, 2.0, 100),
+    ]
+
+    summaries = summarize_stage3_runs(records)
+
+    assert [s["method"] for s in summaries] == ["fm_cls_rolled"]
+
+
+def test_stage3_best_epochs_are_reported_in_seed_order():
+    records = [
+        _stage3_record("fm_cls_guided", 2, 0.01, 1.0, 48),
+        _stage3_record("fm_cls_guided", 0, 0.01, 1.0, 17),
+        _stage3_record("fm_cls_guided", 1, 0.01, 1.0, 86),
+    ]
+
+    assert summarize_stage3_runs(records)[0]["best_epochs"] == [17, 86, 48]
+
+
+def test_stage3_summaries_separate_methods_and_datasets():
+    records = [
+        _stage3_record("fm_cls_rolled", 0, 0.01, 2.0, 10, dataset="dtd"),
+        _stage3_record("fm_cls_guided", 0, 0.02, 5.0, 20, dataset="dtd"),
+        _stage3_record("fm_cls_rolled", 0, 0.03, 1.0, 30, dataset="flowers102"),
+    ]
+
+    summaries = summarize_stage3_runs(records)
+
+    assert len(summaries) == 3
+    # Sorted by dataset, then by the display order (rolled before guided).
+    assert [(s["dataset"], s["method"]) for s in summaries] == [
+        ("dtd", "fm_cls_rolled"), ("dtd", "fm_cls_guided"),
+        ("flowers102", "fm_cls_rolled"),
+    ]
+
+
+def test_a_single_stage3_run_has_no_standard_deviation():
+    summaries = summarize_stage3_runs([_stage3_record("fm_cls_rolled", 0, 0.01, 2.0, 10)])
+
+    assert summaries[0]["std_val_delta"] is None
+
+
+def test_summarizing_no_stage3_runs_is_empty():
+    assert summarize_stage3_runs([]) == []
 

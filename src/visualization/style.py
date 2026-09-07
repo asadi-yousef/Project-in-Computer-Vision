@@ -1,8 +1,9 @@
-"""Shared plot styling, so every Stage 2 figure encodes method and T the same way.
+"""Shared plot styling, so every figure encodes method and T the same way.
 
 Colour identifies the method; line style and marker identify the Euler-step
 count. Keeping the maps here rather than in one plotting module means a
-reader can carry the legend from one figure to the next.
+reader can carry the legend from one figure to the next - across stages as
+well as within one.
 """
 
 from typing import Optional, Tuple
@@ -14,6 +15,10 @@ METHOD_COLORS = {
     "prototype": "black",
     "fm_standard": "tab:blue",
     "fm_rolled": "tab:red",
+    # Stage 3. Kept clear of the Stage 2 pair so a reader who has seen both
+    # stages' figures never confuses fm_rolled with fm_cls_rolled.
+    "fm_cls_rolled": "tab:orange",
+    "fm_cls_guided": "tab:purple",
 }
 DEFAULT_METHOD_COLOR = "tab:green"
 

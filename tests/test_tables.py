@@ -1,6 +1,8 @@
 from src.evaluation.tables import (
     format_accuracy_table,
     format_flow_matching_comparison_table,
+    format_stage3_comparison_table,
+    format_stage3_diagnostics_table,
 )
 
 
@@ -145,3 +147,105 @@ def test_comparison_table_only_includes_the_requested_pair():
 
     assert "52.00%" in table
     assert "99.00%" not in table
+
+
+# --- Stage 3 tables ---
+
+
+SETTINGS = [("dtd", "dinov2_vits14"), ("flowers102", "resnet18")]
+
+
+def _summary(dataset, encoder, method, accuracy, delta=None, std=0.005):
+    return {
+        "dataset": dataset, "encoder": encoder, "method": method, "k_shot": 10,
+        "num_euler_steps": None if method == "linear_probe" else 4,
+        "num_runs": 3, "mean_test_accuracy": accuracy, "std_test_accuracy": std,
+        "mean_delta_accuracy": delta, "std_delta_accuracy": None if delta is None else 0.002,
+    }
+
+
+def test_the_comparison_table_puts_the_three_methods_side_by_side():
+    summaries = [
+        _summary("dtd", "dinov2_vits14", "linear_probe", 0.6858),
+        _summary("dtd", "dinov2_vits14", "fm_cls_rolled", 0.6878, 0.0020),
+        _summary("dtd", "dinov2_vits14", "fm_cls_guided", 0.6963, 0.0105),
+    ]
+
+    table = format_stage3_comparison_table(summaries, [("dtd", "dinov2_vits14")])
+    lines = table.strip().splitlines()
+
+    assert lines[0].startswith("| Dataset | Encoder | linear_probe |")
+    assert "fm_cls_rolled" in lines[0] and "fm_cls_guided" in lines[0]
+    assert len(lines) == 3  # header, separator, one dataset row
+    assert "68.58%" in lines[2] and "(+0.20)" in lines[2] and "(+1.05)" in lines[2]
+
+
+def test_the_comparison_table_has_one_row_per_setting():
+    summaries = [
+        _summary("dtd", "dinov2_vits14", "linear_probe", 0.6858),
+        _summary("flowers102", "resnet18", "linear_probe", 0.8322),
+    ]
+
+    lines = format_stage3_comparison_table(summaries, SETTINGS).strip().splitlines()
+
+    assert len(lines) == 4
+    assert lines[2].startswith("| dtd |")
+    assert lines[3].startswith("| flowers102 |")
+
+
+def test_missing_methods_render_as_not_available():
+    # A partially-completed sweep must still produce a readable table.
+    summaries = [_summary("dtd", "dinov2_vits14", "linear_probe", 0.6858)]
+
+    table = format_stage3_comparison_table(summaries, [("dtd", "dinov2_vits14")])
+
+    assert table.count("n/a") == 2
+
+
+def test_the_baseline_shows_no_delta():
+    summaries = [_summary("dtd", "dinov2_vits14", "linear_probe", 0.6858)]
+
+    row = format_stage3_comparison_table(
+        summaries, [("dtd", "dinov2_vits14")]
+    ).strip().splitlines()[2]
+
+    assert "68.58%" in row
+    assert "(+" not in row and "(-" not in row
+
+
+def test_the_comparison_table_only_shows_the_requested_k_shot():
+    summaries = [
+        _summary("dtd", "dinov2_vits14", "linear_probe", 0.6858),
+        {**_summary("dtd", "dinov2_vits14", "fm_cls_guided", 0.99, 0.30), "k_shot": 5},
+    ]
+
+    table = format_stage3_comparison_table(summaries, [("dtd", "dinov2_vits14")], k_shot=10)
+
+    assert "99.00%" not in table
+
+
+def _diagnostic(dataset, method, val_delta, displacement, epochs):
+    return {
+        "dataset": dataset, "encoder": "dinov2_vits14", "method": method, "k_shot": 10,
+        "num_runs": len(epochs), "mean_val_delta": val_delta, "std_val_delta": 0.003,
+        "mean_initial_val_accuracy": 0.6812, "mean_best_val_accuracy": 0.6812 + val_delta,
+        "mean_displacement": displacement, "best_epochs": epochs,
+    }
+
+
+def test_the_diagnostics_table_reports_displacement_and_selected_epochs():
+    summaries = [
+        _diagnostic("dtd", "fm_cls_rolled", 0.0044, 1.92, [150, 128, 105]),
+        _diagnostic("dtd", "fm_cls_guided", 0.0161, 12.58, [17, 86, 48]),
+    ]
+
+    lines = format_stage3_diagnostics_table(summaries).strip().splitlines()
+
+    assert "Mean displacement" in lines[0]
+    assert "1.92" in lines[2] and "[150, 128, 105]" in lines[2]
+    assert "12.58" in lines[3] and "+1.61%" in lines[3]
+
+
+def test_an_empty_diagnostics_table_says_so():
+    assert "No Stage 3 runs" in format_stage3_diagnostics_table([])
+

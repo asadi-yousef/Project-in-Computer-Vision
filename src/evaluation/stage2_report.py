@@ -134,7 +134,12 @@ def _plot_accuracy_figures(summaries, dataset, encoder, figures_dir) -> Tuple[Op
             methods=["prototype", *FM_METHODS],
             title=f"{dataset} / {encoder}: prototype baseline vs. flow matching",
         )
-        plot_delta_vs_shot(summaries, dataset, encoder, delta_path)
+        # Restricted to the Stage 2 methods: the zero line is the
+        # prototype baseline, and Stage 3's deltas are measured against
+        # the linear probe instead.
+        plot_delta_vs_shot(
+            summaries, dataset, encoder, delta_path, methods=list(FM_METHODS)
+        )
     except ValueError as error:
         print(f"  Skipping Stage 2 accuracy plots for {dataset}/{encoder}: {error}")
         return None, None

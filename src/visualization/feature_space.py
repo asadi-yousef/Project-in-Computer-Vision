@@ -16,7 +16,7 @@ import dataclasses
 import json
 import random
 from pathlib import Path
-from typing import List, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import matplotlib
 
@@ -207,7 +207,7 @@ def plot_feature_space(
 
 
 def project_feature_groups(
-    feature_groups: Sequence[torch.Tensor], seed: int = 0
+    feature_groups: Sequence[torch.Tensor], seed: int = 0, normalize: bool = True
 ) -> List[np.ndarray]:
     """Jointly fit one 2D t-SNE over several feature sets and split the result.
 
@@ -217,17 +217,27 @@ def project_feature_groups(
     separately would produce three unrelated coordinate systems, and a sample
     "moving" between panels would mean nothing.
 
-    Every group is L2-normalized first, for the same reason
-    `project_features_and_prototypes` does it: prototypes are unit-norm by
-    construction while raw encoder features are not, and post-FM features
-    have drifted off the sphere entirely, so without normalizing, t-SNE's
-    distances would be dominated by magnitude rather than direction - the
-    opposite of what the cosine classifier actually uses.
+Whether to normalize first depends on which classifier the picture is
+    about, which is why it is a parameter rather than a fixed choice:
+
+      - **Stage 2 normalizes** (the default). Its prototypes are unit-norm by
+        construction while raw encoder features are not, and its classifier
+        is cosine similarity, which sees only direction. Leaving magnitudes
+        in would let t-SNE's distances be dominated by something the
+        classifier ignores.
+
+      - **Stage 3 does not.** Its classifier is Stage 1's linear probe,
+        `W z + b`, which is not scale-invariant, and the magnitude of the
+        displacement is exactly what distinguishes its two strategies - on
+        DTD one moves features about 2 units and the other about 76, against
+        a feature norm of 48. Normalizing would erase the difference the
+        figure exists to show.
 
     Args:
         feature_groups: the (N_i, D) tensors to project together. All must
             share the same feature dimension D.
         seed: t-SNE is stochastic; this makes the layout reproducible.
+        normalize: L2-normalize every group before projecting.
 
     Returns:
         One (N_i, 2) array per input group, in the same order.
@@ -241,8 +251,12 @@ def project_feature_groups(
     if len(dimensions) != 1:
         raise ValueError(f"All feature groups must share one dimension, got {sorted(dimensions)}")
 
-    normalized = [torch.nn.functional.normalize(group, dim=1) for group in feature_groups]
-    combined = torch.cat(normalized, dim=0).numpy()
+    prepared = (
+        [torch.nn.functional.normalize(group, dim=1) for group in feature_groups]
+        if normalize
+        else list(feature_groups)
+    )
+    combined = torch.cat(prepared, dim=0).numpy()
 
     perplexity = min(30, max(2, combined.shape[0] // 4))
     projected = TSNE(
@@ -259,9 +273,9 @@ def project_feature_groups(
 
 def plot_feature_space_comparison(
     panels: Sequence[Tuple[str, np.ndarray]],
-    prototype_2d: np.ndarray,
+    prototype_2d: Optional[np.ndarray],
     sample_class_ids: List[int],
-    prototype_class_ids: List[int],
+    prototype_class_ids: Optional[List[int]],
     class_names: List[str],
     suptitle: str,
     save_path: Union[str, Path],
@@ -274,13 +288,21 @@ def plot_feature_space_comparison(
     are identical across panels by construction: they are the flow's fixed
     targets and are never transported.
 
+    Prototypes are optional. Stage 2 shows them because they are the flow's
+    fixed targets, so where a sample sits relative to its own prototype is
+    the whole question. Stage 3 has no prototypes at all - its classifier is
+    a hyperplane, not a set of reference points - so it passes None for both
+    prototype arguments and the panels show only samples.
+
     Args:
         panels: (title, sample_2d) per panel, e.g. original / after standard
             FM / after rolled-out FM. All coordinates must come from one
             joint projection (see `project_feature_groups`).
-        prototype_2d: (C, 2) projected prototype coordinates, shared by every panel.
+        prototype_2d: (C, 2) projected prototype coordinates, shared by every
+            panel, or None to draw no prototypes.
         sample_class_ids: (N,) true class id per test sample, shared by every panel.
-        prototype_class_ids: (C,) class id per prototype, matching prototype_2d order.
+        prototype_class_ids: (C,) class id per prototype, matching
+            prototype_2d order. Must be None exactly when prototype_2d is.
         class_names: full dataset class-name list, indexed by class id.
         suptitle: figure-level title.
         save_path: where to save the PNG.
@@ -290,6 +312,11 @@ def plot_feature_space_comparison(
     """
     if not panels:
         raise ValueError("panels is empty; nothing to plot")
+    if (prototype_2d is None) != (prototype_class_ids is None):
+        raise ValueError(
+            "prototype_2d and prototype_class_ids must both be given or both be None"
+        )
+    show_prototypes = prototype_2d is not None
 
     unique_class_ids = sorted(set(sample_class_ids))
     color_map = {class_id: plt.cm.tab10(i % 10) for i, class_id in enumerate(unique_class_ids)}
@@ -300,8 +327,10 @@ def plot_feature_space_comparison(
     )
     axes = axes[0]
 
-    all_x = np.concatenate([sample_2d[:, 0] for _, sample_2d in panels] + [prototype_2d[:, 0]])
-    all_y = np.concatenate([sample_2d[:, 1] for _, sample_2d in panels] + [prototype_2d[:, 1]])
+    prototype_x = [prototype_2d[:, 0]] if show_prototypes else []
+    prototype_y = [prototype_2d[:, 1]] if show_prototypes else []
+    all_x = np.concatenate([sample_2d[:, 0] for _, sample_2d in panels] + prototype_x)
+    all_y = np.concatenate([sample_2d[:, 1] for _, sample_2d in panels] + prototype_y)
     margin_x = 0.05 * (all_x.max() - all_x.min())
     margin_y = 0.05 * (all_y.max() - all_y.min())
 
@@ -313,12 +342,13 @@ def plot_feature_space_comparison(
                 color=color_map[class_id], marker="o", s=22, alpha=0.7,
                 label=class_names[class_id],
             )
-        for prototype_point, class_id in zip(prototype_2d, prototype_class_ids):
-            axis.scatter(
-                prototype_point[0], prototype_point[1],
-                color=color_map[class_id], marker="*", s=340,
-                edgecolors="black", linewidths=1.2, zorder=5,
-            )
+        if show_prototypes:
+            for prototype_point, class_id in zip(prototype_2d, prototype_class_ids):
+                axis.scatter(
+                    prototype_point[0], prototype_point[1],
+                    color=color_map[class_id], marker="*", s=340,
+                    edgecolors="black", linewidths=1.2, zorder=5,
+                )
         axis.set_title(title, fontsize=10)
         axis.set_xlabel("t-SNE dimension 1")
         axis.set_xlim(all_x.min() - margin_x, all_x.max() + margin_x)
@@ -328,7 +358,7 @@ def plot_feature_space_comparison(
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(
         handles, labels, loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=8,
-        title="Class (o = image, * = prototype)",
+        title="Class (o = image, * = prototype)" if show_prototypes else "Class",
     )
     fig.suptitle(suptitle, fontsize=11)
 
