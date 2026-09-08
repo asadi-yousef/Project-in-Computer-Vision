@@ -18,6 +18,7 @@ from src.flow_matching.stage3_training import (
     evaluate_pipeline,
     rollout_with_velocities,
     train_classifier_guided_fm,
+    train_joint_finetuning,
     train_rolled_out_classification,
 )
 from src.flow_matching.velocity_net import (
@@ -670,4 +671,162 @@ def test_both_strategies_start_from_the_same_network():
     assert rolled.initial_val_accuracy == guided.initial_val_accuracy
     assert rolled.initial_val_loss == pytest.approx(guided.initial_val_loss)
     assert len(rolled.history) == len(guided.history)
+
+
+# --- The optional extension: joint fine-tuning (part_3.pdf) ---
+
+
+def _train_joint(seed=0, train_flow=True, **overrides):
+    classifier = _frozen_classifier()
+    train_features, train_labels = _synthetic_split(48, seed=1)
+    val_features, val_labels = _synthetic_split(32, seed=2)
+    settings = dict(hidden_dims=[16, 16], num_euler_steps=2, max_epochs=4, batch_size=16)
+    settings.update(overrides)
+    result = train_joint_finetuning(
+        train_features, train_labels, val_features, val_labels,
+        classifier, NUM_CLASSES, Stage3Hyperparams(**settings),
+        seed=seed, device=CPU, train_flow=train_flow,
+    )
+    return result, classifier
+
+
+def test_joint_training_returns_both_checkpoints():
+    result, _ = _train_joint()
+
+    assert result.best_classifier_state_dict is not None
+    assert set(result.best_classifier_state_dict) == {"linear.weight", "linear.bias"}
+
+    rebuilt = build_near_identity_velocity_network(FEATURE_DIM, [16, 16])
+    rebuilt.load_state_dict(result.best_state_dict)  # must not raise
+    LinearProbe(FEATURE_DIM, NUM_CLASSES).load_state_dict(
+        result.best_classifier_state_dict
+    )
+
+
+def test_the_frozen_strategies_report_no_classifier_checkpoint():
+    # How a caller tells the two kinds of run apart.
+    frozen_result, _, _ = _train()
+
+    assert frozen_result.best_classifier_state_dict is None
+
+
+def test_joint_training_does_not_mutate_the_callers_classifier():
+    # The loaded probe is still needed unmodified - it defines the baseline
+    # this run is measured against, and the frozen runs share it.
+    classifier = _frozen_classifier()
+    before_weight = classifier.linear.weight.detach().clone()
+    before_bias = classifier.linear.bias.detach().clone()
+
+    train_features, train_labels = _synthetic_split(48, seed=1)
+    val_features, val_labels = _synthetic_split(32, seed=2)
+    result = train_joint_finetuning(
+        train_features, train_labels, val_features, val_labels,
+        classifier, NUM_CLASSES,
+        Stage3Hyperparams(hidden_dims=[16, 16], num_euler_steps=2, max_epochs=4),
+        seed=0, device=CPU,
+    )
+
+    assert torch.equal(classifier.linear.weight, before_weight)
+    assert torch.equal(classifier.linear.bias, before_bias)
+    assert all(not p.requires_grad for p in classifier.parameters())
+    # ... and the copy really did move.
+    assert not torch.equal(result.best_classifier_state_dict["linear.weight"], before_weight)
+
+
+def test_joint_training_starts_from_the_same_place_as_a_frozen_run():
+    # Only the unfreezing may differ, so the two must agree on where they began.
+    frozen, _, _ = _train(seed=5)
+    joint, _ = _train_joint(seed=5)
+
+    assert joint.initial_val_accuracy == frozen.initial_val_accuracy
+    assert joint.initial_val_loss == pytest.approx(frozen.initial_val_loss)
+
+
+def test_the_classifier_only_control_leaves_the_flow_at_identity():
+    # `cls_finetune`: the flow's learning rate is held at zero, so the
+    # pipeline stays exactly the classifier and any gain is the classifier's.
+    #
+    # Asserted behaviourally rather than by comparing weights to a freshly
+    # built network: the hidden layers are randomly initialized and a fresh
+    # network draws different values. What matters is that the final layer is
+    # still zero, which makes the rollout the identity whatever the hidden
+    # layers hold.
+    result, _ = _train_joint(train_flow=False)
+
+    rebuilt = build_near_identity_velocity_network(FEATURE_DIM, [16, 16])
+    rebuilt.load_state_dict(result.best_state_dict)
+    final_layer = rebuilt.net[-1]
+
+    assert torch.equal(final_layer.weight, torch.zeros_like(final_layer.weight))
+    assert torch.equal(final_layer.bias, torch.zeros_like(final_layer.bias))
+
+    features, _ = _synthetic_split(16, seed=9)
+    with torch.no_grad():
+        assert torch.equal(euler_transport(rebuilt, features, 2), features)
+
+    assert all(log.mean_displacement == pytest.approx(0.0) for log in result.history)
+
+
+def test_the_control_still_trains_the_classifier():
+    result, classifier = _train_joint(train_flow=False)
+
+    assert not torch.equal(
+        result.best_classifier_state_dict["linear.weight"],
+        classifier.linear.weight,
+    )
+
+
+def test_delayed_unfreezing_holds_the_classifier_still_at_first():
+    # part_3.pdf suggests delayed unfreezing; with the flow also disabled,
+    # nothing may change at all before the unfreeze epoch.
+    result, classifier = _train_joint(
+        train_flow=False, max_epochs=3, unfreeze_epoch=4
+    )
+
+    assert torch.equal(
+        result.best_classifier_state_dict["linear.weight"], classifier.linear.weight
+    )
+
+
+def test_the_classifier_moves_once_its_epoch_arrives():
+    early, classifier = _train_joint(train_flow=False, max_epochs=4, unfreeze_epoch=1)
+    late, _ = _train_joint(train_flow=False, max_epochs=4, unfreeze_epoch=3)
+
+    reference = classifier.linear.weight
+    early_shift = (early.best_classifier_state_dict["linear.weight"] - reference).abs().sum()
+    late_shift = (late.best_classifier_state_dict["linear.weight"] - reference).abs().sum()
+
+    assert early_shift > 0
+    assert late_shift >= 0
+
+
+def test_the_two_learning_rates_are_applied_to_their_own_groups():
+    captured = {}
+    original = torch.optim.AdamW.__init__
+
+    def spy(self, params, *args, **kwargs):
+        groups = list(params)
+        captured["lrs"] = [group["lr"] for group in groups]
+        return original(self, groups, *args, **kwargs)
+
+    torch.optim.AdamW.__init__ = spy
+    try:
+        _train_joint(learning_rate=1e-3, classifier_learning_rate=1e-5, max_epochs=1)
+    finally:
+        torch.optim.AdamW.__init__ = original
+
+    assert captured["lrs"] == [1e-3, 1e-5]
+
+
+def test_joint_training_is_reproducible_given_a_seed():
+    first, _ = _train_joint(seed=3)
+    second, _ = _train_joint(seed=3)
+    different, _ = _train_joint(seed=4)
+
+    assert [log.train_loss for log in first.history] == [
+        log.train_loss for log in second.history
+    ]
+    assert [log.train_loss for log in first.history] != [
+        log.train_loss for log in different.history
+    ]
 

@@ -27,6 +27,8 @@ VALID_METHODS = (
     "fm_rolled",
     "fm_cls_rolled",
     "fm_cls_guided",
+    "fm_cls_joint",
+    "cls_finetune",
 )
 VALID_K_SHOTS = (5, 10, "full")
 
@@ -46,6 +48,19 @@ FLOW_MATCHING_METHODS = ("fm_standard", "fm_rolled")
 #   - fm_cls_guided: classifier-guided targets with the standard FM loss.
 # Grouped here for the same reason as FLOW_MATCHING_METHODS above.
 STAGE3_METHODS = ("fm_cls_rolled", "fm_cls_guided")
+
+# part_3.pdf's optional extension: "you may also unfreeze the pretrained
+# linear classifier and jointly optimize the FM transformation and
+# classifier. Compare this with the frozen-classifier setting and with the
+# original Stage 1 linear probe."
+#
+#   - fm_cls_joint:  the extension itself - flow and classifier trained together.
+#   - cls_finetune:  the control. Continues training the Stage 1 classifier
+#     alone, with the flow held at its identity initialization. Not requested
+#     by the spec, but without it the extension is uninterpretable: any gain
+#     from unfreezing could come simply from training the classifier for more
+#     epochs, and this separates that from what the flow contributes.
+STAGE3_EXTENSION_METHODS = ("fm_cls_joint", "cls_finetune")
 
 # part_3.pdf: "Choose a single number of Euler steps T and use it throughout
 # Stage 3." This is that choice. Stage 2 measured T in {4, 12} across 18
@@ -118,6 +133,19 @@ STAGE3_SELECTED_HYPERPARAMS = {
         "target_step_size": 0.02, "target_num_steps": 3, "target_refresh_epochs": 20,
     },
 }
+
+# The extension methods inherit the frozen setting's selection for the same
+# dataset, rather than being searched separately. That is deliberate: the
+# comparison part_3.pdf asks for is between the frozen and unfrozen
+# classifier, so everything else has to be held identical or the difference
+# stops being attributable to the unfreezing. Deriving them here rather than
+# copying the values means they cannot drift apart.
+for _dataset in STAGE3_SETTINGS:
+    for _method in STAGE3_EXTENSION_METHODS:
+        STAGE3_SELECTED_HYPERPARAMS[(_method, _dataset)] = dict(
+            STAGE3_SELECTED_HYPERPARAMS[("fm_cls_rolled", _dataset)]
+        )
+del _dataset, _method
 
 # DINOv2 was only selected for DTD (Task 0 decision), not Flowers-102.
 DINOV2_DATASET = "dtd"
@@ -261,6 +289,17 @@ class Stage3Hyperparams:
     target_refresh_epochs: int = 1
     normalize_target_update: bool = True
 
+    # The optional extension (fm_cls_joint, cls_finetune) only. The
+    # classifier's learning rate defaults an order of magnitude below the
+    # flow's because it is not being trained from scratch - it starts from a
+    # converged Stage 1 checkpoint, and part_3.pdf suggests experimenting
+    # with "different learning rates for the FM and classifier".
+    # `unfreeze_epoch` implements the spec's other suggestion, delayed
+    # unfreezing: the classifier's learning rate is held at zero until this
+    # epoch. 1 means unfrozen from the start.
+    classifier_learning_rate: float = 1e-4
+    unfreeze_epoch: int = 1
+
     def __post_init__(self) -> None:
         if self.num_euler_steps < 1:
             raise ValueError(
@@ -293,6 +332,15 @@ class Stage3Hyperparams:
             raise ValueError(
                 f"target_refresh_epochs must be at least 1, "
                 f"got {self.target_refresh_epochs}"
+            )
+        if self.classifier_learning_rate < 0:
+            raise ValueError(
+                f"classifier_learning_rate must be non-negative, "
+                f"got {self.classifier_learning_rate}"
+            )
+        if self.unfreeze_epoch < 1:
+            raise ValueError(
+                f"unfreeze_epoch must be at least 1, got {self.unfreeze_epoch}"
             )
 
 

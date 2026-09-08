@@ -32,7 +32,12 @@ from src.evaluation.confusion_matrix import compute_confusion_matrix, row_normal
 from src.evaluation.pdf_report import generate_pdf_report
 from src.evaluation.predictions import get_linear_probe_test_predictions
 from src.evaluation.stage2_report import format_stage2_section, generate_stage2_figures
-from src.evaluation.stage3_report import format_stage3_section, generate_stage3_figures
+from src.evaluation.stage3_report import (
+    format_stage3_extension_section,
+    format_stage3_section,
+    generate_stage3_figures,
+    measure_classifier_drift,
+)
 from src.evaluation.tables import format_accuracy_table
 from src.features.loading import load_validated_feature_cache
 from src.visualization.accuracy_vs_shot import plot_accuracy_vs_shot
@@ -211,6 +216,11 @@ def main() -> None:
     # its settings are a fixed pair list rather than everything in outputs/.
     stage3_settings = sorted(STAGE3_SETTINGS.items())
     stage3_summaries = summarize_stage3_runs(records)
+    stage3_drift = [
+        row
+        for dataset, encoder in stage3_settings
+        for row in measure_classifier_drift(dataset, encoder, output_dir, device)
+    ]
     print(f"Building Stage 3 figures on {device}")
     stage3_figures, stage3_separations = generate_stage3_figures(
         stage3_settings, cache_dir, data_dir, output_dir,
@@ -270,6 +280,13 @@ def main() -> None:
             tuning_path=reports_dir / "stage3_tuning.json",
         )
     )
+
+    extension_lines = format_stage3_extension_section(
+        summaries, stage3_drift, stage3_settings
+    )
+    if extension_lines:
+        report_lines.append(SECTION_BREAK)
+        report_lines.extend(extension_lines)
 
     report_path = PROJECT_ROOT / "RESULTS.md"
     with open(report_path, "w", encoding="utf-8") as f:

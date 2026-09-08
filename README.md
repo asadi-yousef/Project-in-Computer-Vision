@@ -77,6 +77,14 @@ training objectives are compared, both updating only the velocity network:
    train with Stage 2's standard FM loss using `z` as source and that target as endpoint.
    Targets are periodically recomputed as the flow changes.
 
+**Optional extension.** part_3.pdf also invites unfreezing the classifier and training it
+jointly with the flow. `fm_cls_joint` does that, on Strategy 1's objective and with everything
+else held identical to the corresponding frozen run, so the difference is attributable to the
+unfreezing. It is accompanied by `cls_finetune`, a control the spec does not ask for: the
+Stage 1 classifier trained on alone, with the flow held at its identity initialization. Without
+it the extension is unreadable, because any gain from unfreezing could just be the gain from
+training the classifier for another 200 epochs — and measurably, part of it is.
+
 part_3.pdf narrows the scope deliberately: **one representative encoder per dataset**
 (DINOv2 for DTD, ResNet-18 for Flowers-102), **one training-set size** (K=10), and **a single
 number of Euler steps** (T=4) used throughout. Three seeds, as in Stage 1.
@@ -226,9 +234,14 @@ Stage 2 grid takes roughly ten minutes.
 Stage 3 runs separately, after Stage 1 is complete:
 
 ```bash
-python scripts/tune_stage3.py               # hyperparameter search (~40 min on a laptop GPU)
-python scripts/run_stage3_experiments.py    # the twelve reported runs (~3 min)
+python scripts/tune_stage3.py                          # hyperparameter search (~40 min on a laptop GPU)
+python scripts/run_stage3_experiments.py               # the twelve reported runs (~3 min)
+python scripts/run_stage3_experiments.py --extension   # plus the optional extension (~4 min)
 ```
+
+`--extension` adds `fm_cls_joint` and its `cls_finetune` control. They are opt-in because
+part_3.pdf marks the extension optional and asks for it only "after completing the
+frozen-classifier experiments".
 
 The search is optional to re-run — its outcome is already recorded in
 `STAGE3_SELECTED_HYPERPARAMS` in `src/utils/config.py`, and the full results in
@@ -251,6 +264,7 @@ belonging to the branch it extends:
 | prototype | 3 subset seeds | 3 subset seeds | **1 run** |
 | flow matching (Stage 2) | 3 subset seeds | 3 subset seeds | **1 run** |
 | Stage 3 | — | 3 subset seeds | — |
+| Stage 3 extension | — | 3 subset seeds | — |
 
 Stage 3 runs only at K=10 (part_3.pdf: "one training-set size for the main experiments"), and
 follows the linear probe it extends: three seeds, each pairing with the Stage 1 checkpoint
@@ -346,7 +360,14 @@ outputs/fm_standard/<dataset>/<encoder>/k<k>/T<steps>/{seed<n>|single_run}/
 outputs/fm_rolled/<dataset>/<encoder>/k<k>/T<steps>/{seed<n>|single_run}/
 outputs/fm_cls_rolled/<dataset>/<encoder>/k10/T4/seed<n>/
 outputs/fm_cls_guided/<dataset>/<encoder>/k10/T4/seed<n>/
+outputs/fm_cls_joint/<dataset>/<encoder>/k10/T4/seed<n>/
+outputs/cls_finetune/<dataset>/<encoder>/k10/T4/seed<n>/
 ```
+
+The two extension runs additionally write `classifier.pt`, since they are the only ones that
+train a classifier of their own. It sits beside `checkpoint.pt` rather than inside it so that
+every existing reader — all of which expect `checkpoint.pt` to be a velocity network — keeps
+working unchanged.
 
 Stage 3 reuses the same layout helper as Stage 2, so its runs sit alongside them in the same
 shape and the report pipeline walks them identically. All four files are written by one shared

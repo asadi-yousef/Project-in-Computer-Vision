@@ -68,6 +68,7 @@ velocity error for Strategy 2. Those are not comparable to each other, or to
 accuracies are comparable throughout.
 """
 
+import copy
 import dataclasses
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -126,6 +127,10 @@ class Stage3TrainResult:
             validation accuracy, since the rollout is exactly the identity
             before training - so it is the baseline the curves start from.
         initial_val_loss: the matching validation loss.
+        best_classifier_state_dict: the classifier's weights at the selected
+            epoch, for the runs that train it (part_3.pdf's optional
+            extension). None whenever the classifier was frozen, which is
+            also how a caller can tell which kind of run produced this.
     """
 
     best_epoch: int
@@ -134,6 +139,7 @@ class Stage3TrainResult:
     history: List[Stage3EpochLog]
     initial_val_accuracy: float
     initial_val_loss: float
+    best_classifier_state_dict: Optional[Dict[str, torch.Tensor]] = None
 
 
 def _validate_inputs(
@@ -411,6 +417,7 @@ def _train_stage3_velocity_network(
         [nn.Module, torch.optim.Optimizer], Callable[[int], Tuple[float, float]]
     ],
     progress: Optional[Callable[[Stage3EpochLog], None]] = None,
+    trainable_classifier: Optional[nn.Module] = None,
 ) -> Stage3TrainResult:
     """Shared training skeleton for both Stage 3 strategies.
 
@@ -436,6 +443,13 @@ def _train_stage3_velocity_network(
             plain callback preserves the seeding order the earlier stages
             use - seed, then initialize, then build the data loader.
         progress: optional per-epoch callback for console output.
+        trainable_classifier: for part_3.pdf's optional extension. When given,
+            this module's parameters join the optimizer in their own group at
+            `classifier_learning_rate`, held at zero until `unfreeze_epoch`,
+            and its weights are captured alongside the flow's at the selected
+            epoch. The caller is responsible for passing a copy with
+            gradients enabled - `classifier` here is whatever the objective
+            scores against, and for a joint run those are the same module.
 
     Returns:
         A `Stage3TrainResult` with the best-validation-accuracy weights.
@@ -455,10 +469,21 @@ def _train_stage3_velocity_network(
     velocity_net = build_near_identity_velocity_network(
         train_features.shape[1], hyperparams.hidden_dims
     ).to(device)
+    # One optimizer with a group per trainable module, so the flow and the
+    # classifier can carry different learning rates (part_3.pdf suggests
+    # experimenting with exactly that) while sharing one update step.
+    parameter_groups = [
+        {"params": list(velocity_net.parameters()), "lr": hyperparams.learning_rate}
+    ]
+    if trainable_classifier is not None:
+        parameter_groups.append(
+            {
+                "params": list(trainable_classifier.parameters()),
+                "lr": hyperparams.classifier_learning_rate,
+            }
+        )
     optimizer = torch.optim.AdamW(
-        velocity_net.parameters(),
-        lr=hyperparams.learning_rate,
-        weight_decay=hyperparams.weight_decay,
+        parameter_groups, weight_decay=hyperparams.weight_decay
     )
 
     # The identity starting point: equal to the frozen probe's own accuracy,
@@ -473,9 +498,18 @@ def _train_stage3_velocity_network(
     best_val_accuracy = -1.0
     best_epoch = -1
     best_state_dict: Dict[str, torch.Tensor] = {}
+    best_classifier_state_dict: Optional[Dict[str, torch.Tensor]] = None
 
     for epoch in range(1, hyperparams.max_epochs + 1):
         velocity_net.train()
+        if trainable_classifier is not None:
+            # Delayed unfreezing: the classifier's group sits at zero until
+            # its epoch, letting the flow adapt to a fixed classifier first.
+            optimizer.param_groups[-1]["lr"] = (
+                hyperparams.classifier_learning_rate
+                if epoch >= hyperparams.unfreeze_epoch
+                else 0.0
+            )
         train_loss, train_accuracy = run_epoch(epoch)
 
         val_loss, val_accuracy, mean_displacement = evaluate_pipeline(
@@ -499,6 +533,11 @@ def _train_stage3_velocity_network(
             best_state_dict = {
                 k: v.detach().clone().cpu() for k, v in velocity_net.state_dict().items()
             }
+            if trainable_classifier is not None:
+                best_classifier_state_dict = {
+                    k: v.detach().clone().cpu()
+                    for k, v in trainable_classifier.state_dict().items()
+                }
 
     return Stage3TrainResult(
         best_epoch=best_epoch,
@@ -507,6 +546,7 @@ def _train_stage3_velocity_network(
         history=history,
         initial_val_accuracy=initial_val_accuracy,
         initial_val_loss=initial_val_loss,
+        best_classifier_state_dict=best_classifier_state_dict,
     )
 
 
@@ -695,4 +735,119 @@ def train_classifier_guided_fm(
     return _train_stage3_velocity_network(
         train_features, train_labels, val_features, val_labels, classifier,
         num_classes, hyperparams, seed, device, epoch_fn_factory, progress,
+    )
+
+
+def train_joint_finetuning(
+    train_features: torch.Tensor,
+    train_labels: torch.Tensor,
+    val_features: torch.Tensor,
+    val_labels: torch.Tensor,
+    classifier: nn.Module,
+    num_classes: int,
+    hyperparams: Stage3Hyperparams,
+    seed: int,
+    device: torch.device,
+    progress: Optional[Callable[[Stage3EpochLog], None]] = None,
+    train_flow: bool = True,
+) -> Stage3TrainResult:
+    """part_3.pdf's optional extension: unfreeze the classifier and train both.
+
+    "After completing the frozen-classifier experiments, you may also unfreeze
+    the pretrained linear classifier and jointly optimize the FM
+    transformation and classifier."
+
+    The objective is Strategy 1's - cross-entropy on the transported feature,
+    plus the same displacement penalty - because that is the one that scores
+    the pipeline end to end and so has a gradient for both modules. Strategy
+    2's would not transfer cleanly: its targets are built from the gradient of
+    a *fixed* classifier, and that construction loses its meaning once the
+    classifier is moving underneath it.
+
+    Everything except the unfreezing is held identical to the corresponding
+    frozen run - the same architecture, seed, optimizer, epoch budget,
+    displacement penalty and selection rule, all inherited from the shared
+    skeleton - so the difference between the two is attributable to the
+    unfreezing rather than to a changed recipe.
+
+    Args:
+        train_features, train_labels: the K-shot subset, raw features.
+        val_features, val_labels: the full official validation split.
+        classifier: the loaded Stage 1 probe. **Copied, not mutated** - the
+            caller's frozen module is left exactly as it was, so the same
+            loaded probe can be reused for the frozen runs and for the
+            baseline it is compared against.
+        num_classes: C, for label validation.
+        hyperparams: `classifier_learning_rate` and `unfreeze_epoch` apply
+            here and nowhere else.
+        seed: drives initialization and shuffling.
+        device: device to train on.
+        progress: optional per-epoch callback.
+        train_flow: when False, the flow's learning rate is held at zero, so
+            it stays at its identity initialization and only the classifier
+            moves. This is the `cls_finetune` control - the run that says how
+            much of any gain is simply from training the classifier longer.
+
+    Returns:
+        A `Stage3TrainResult` whose `best_classifier_state_dict` holds the
+        classifier's weights at the selected epoch.
+    """
+    num_steps = hyperparams.num_euler_steps
+
+    # A copy with gradients switched back on. The caller's classifier was
+    # frozen by `load_frozen_linear_probe` and is still needed unmodified -
+    # it defines the baseline this run is measured against.
+    trainable_classifier = copy.deepcopy(classifier).to(device)
+    trainable_classifier.train()
+    for parameter in trainable_classifier.parameters():
+        parameter.requires_grad_(True)
+
+    effective = hyperparams
+    if not train_flow:
+        effective = dataclasses.replace(hyperparams, learning_rate=0.0)
+
+    def epoch_fn_factory(velocity_net, optimizer):
+        loader = DataLoader(
+            TensorDataset(train_features, train_labels),
+            batch_size=hyperparams.batch_size,
+            shuffle=True,
+        )
+
+        def run_epoch(epoch: int) -> Tuple[float, float]:
+            running_loss = 0.0
+            running_correct = 0
+            num_samples = 0
+
+            for batch_features, batch_labels in loader:
+                batch_features = batch_features.to(device)
+                batch_labels = batch_labels.to(device)
+
+                optimizer.zero_grad()
+                loss, transported = classification_rollout_loss(
+                    velocity_net,
+                    trainable_classifier,
+                    batch_features,
+                    batch_labels,
+                    num_steps,
+                    hyperparams.displacement_penalty,
+                    hyperparams.velocity_penalty,
+                )
+                loss.backward()
+                optimizer.step()
+
+                batch_size = batch_labels.shape[0]
+                running_loss += loss.item() * batch_size
+                with torch.no_grad():
+                    predictions = trainable_classifier(transported).argmax(dim=1)
+                    running_correct += (predictions == batch_labels).sum().item()
+                num_samples += batch_size
+
+            return running_loss / num_samples, running_correct / num_samples
+
+        return run_epoch
+
+    return _train_stage3_velocity_network(
+        train_features, train_labels, val_features, val_labels,
+        trainable_classifier, num_classes, effective, seed, device,
+        epoch_fn_factory, progress, trainable_classifier=trainable_classifier,
     )

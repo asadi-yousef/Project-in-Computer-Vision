@@ -76,6 +76,19 @@ def load_all_results(output_dir: Union[str, Path]) -> List[dict]:
 # classifier-guided FM training."
 STAGE3_COMPARISON_METHODS = ("linear_probe", "fm_cls_rolled", "fm_cls_guided")
 
+# part_3.pdf's optional extension asks to "compare this with the
+# frozen-classifier setting and with the original Stage 1 linear probe".
+# `fm_cls_rolled` is the frozen-classifier setting to compare against,
+# because the joint run optimizes the same objective with the classifier
+# unfrozen. `cls_finetune` is the control that separates what the flow
+# contributes from what simply training the classifier longer contributes.
+STAGE3_EXTENSION_COMPARISON_METHODS = (
+    "linear_probe",
+    "cls_finetune",
+    "fm_cls_rolled",
+    "fm_cls_joint",
+)
+
 
 def method_label(method: str, num_euler_steps: Optional[int]) -> str:
     """Human-readable name for a method, including its T when it has one.

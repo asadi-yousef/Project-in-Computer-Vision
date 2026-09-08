@@ -102,7 +102,10 @@ def format_flow_matching_comparison_table(summaries: List[dict], dataset: str, e
 
 
 def format_stage3_comparison_table(
-    summaries: List[dict], settings: Sequence[Tuple[str, str]], k_shot=10
+    summaries: List[dict],
+    settings: Sequence[Tuple[str, str]],
+    k_shot=10,
+    methods: Sequence[str] = STAGE3_COMPARISON_METHODS,
 ) -> str:
     """Render part_3.pdf's main comparison: one row per dataset, three methods.
 
@@ -124,6 +127,9 @@ def format_stage3_comparison_table(
         summaries: aggregated summaries from `aggregate_results`.
         settings: the (dataset, encoder) pairs to show, one row each.
         k_shot: the training-set size Stage 3 used.
+        methods: the columns, in order. Defaults to the three conditions
+            part_3.pdf's main comparison names; the optional extension passes
+            its own set.
     """
     by_setting = {
         (s["dataset"], s["encoder"], s["method"]): s
@@ -131,13 +137,13 @@ def format_stage3_comparison_table(
         if s["k_shot"] == k_shot
     }
 
-    header = "| Dataset | Encoder | " + " | ".join(STAGE3_COMPARISON_METHODS) + " |\n"
-    header += "|---" * (len(STAGE3_COMPARISON_METHODS) + 2) + "|\n"
+    header = "| Dataset | Encoder | " + " | ".join(methods) + " |\n"
+    header += "|---" * (len(methods) + 2) + "|\n"
 
     rows = []
     for dataset, encoder in settings:
         cells = []
-        for method in STAGE3_COMPARISON_METHODS:
+        for method in methods:
             summary = by_setting.get((dataset, encoder, method))
             if summary is None:
                 cells.append("n/a")

@@ -34,11 +34,27 @@ TEST_DATASETS = list(STAGE3_SETTINGS)
 # --- the selected-hyperparameter table ---
 
 
-def test_a_selection_exists_for_every_method_and_dataset():
+def test_a_selection_exists_for_every_runnable_method_and_dataset():
+    from src.flow_matching.stage3_runner import ALL_STAGE3_METHODS
+
     expected = {
-        (method, dataset) for method in STAGE3_METHODS for dataset in STAGE3_SETTINGS
+        (method, dataset)
+        for method in ALL_STAGE3_METHODS
+        for dataset in STAGE3_SETTINGS
     }
     assert set(STAGE3_SELECTED_HYPERPARAMS) == expected
+
+
+def test_the_extension_inherits_the_frozen_settings_selection():
+    # The comparison part_3.pdf asks for is frozen versus unfrozen, so every
+    # other choice has to be held identical or the difference stops being
+    # attributable to the unfreezing.
+    from src.utils.config import STAGE3_EXTENSION_METHODS
+
+    for dataset in STAGE3_SETTINGS:
+        frozen = STAGE3_SELECTED_HYPERPARAMS[("fm_cls_rolled", dataset)]
+        for method in STAGE3_EXTENSION_METHODS:
+            assert STAGE3_SELECTED_HYPERPARAMS[(method, dataset)] == frozen
 
 
 def test_every_selection_is_a_valid_override():

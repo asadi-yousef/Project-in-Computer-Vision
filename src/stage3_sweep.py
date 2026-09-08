@@ -19,7 +19,11 @@ from typing import List, Optional, Sequence, Union
 
 import torch
 
-from src.flow_matching.stage3_runner import run_stage3_experiment, stage3_run_dir
+from src.flow_matching.stage3_runner import (
+    ALL_STAGE3_METHODS,
+    run_stage3_experiment,
+    stage3_run_dir,
+)
 from src.utils.config import (
     STAGE3_K_SHOT,
     STAGE3_METHODS,
@@ -70,7 +74,9 @@ def run_stage3_sweep(
         device: device to train and evaluate on.
         force_rerun: re-run and overwrite runs that already have a result.json.
         methods, datasets, seeds, k_shot: override the protocol, for tests and
-            partial re-runs.
+            partial re-runs. `methods` defaults to the two frozen-classifier
+            strategies; part_3.pdf's optional extension is opt-in, and is
+            requested by naming `fm_cls_joint` and `cls_finetune` explicitly.
         base_hyperparams: settings the selected overrides are applied on top
             of. Tests use this to train a tiny network for a few epochs.
         verbose: print progress.

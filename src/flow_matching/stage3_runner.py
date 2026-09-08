@@ -30,6 +30,7 @@ must not leave hundreds of run directories behind.
 """
 
 import dataclasses
+import functools
 from pathlib import Path
 from typing import Callable, Dict, Optional, Sequence, Tuple, Union
 
@@ -41,6 +42,7 @@ from src.classifiers.frozen_probe import (
     load_frozen_linear_probe,
     verify_stored_test_accuracy,
 )
+from src.classifiers.linear_probe import LinearProbe
 from src.data.few_shot import sample_balanced_subset_indices
 from src.features.loading import load_validated_feature_cache
 from src.flow_matching.runner import flow_matching_run_dir
@@ -49,17 +51,31 @@ from src.flow_matching.stage3_training import (
     Stage3TrainResult,
     evaluate_pipeline,
     train_classifier_guided_fm,
+    train_joint_finetuning,
     train_rolled_out_classification,
 )
 from src.flow_matching.velocity_net import build_near_identity_velocity_network
-from src.utils.config import STAGE3_METHODS, ExperimentConfig
+from src.utils.config import (
+    STAGE3_EXTENSION_METHODS,
+    STAGE3_METHODS,
+    ExperimentConfig,
+)
 from src.utils.run_metadata import save_run_artifacts
 
-# Which training function implements each of part_3.pdf's strategies.
+# Which training function implements each of part_3.pdf's strategies, plus
+# the optional extension. `cls_finetune` is the same joint trainer with the
+# flow's learning rate held at zero: it stays at its identity initialization,
+# so the run measures the classifier's own contribution alone.
 STRATEGY_TRAINERS = {
     "fm_cls_rolled": train_rolled_out_classification,
     "fm_cls_guided": train_classifier_guided_fm,
+    "fm_cls_joint": train_joint_finetuning,
+    "cls_finetune": functools.partial(train_joint_finetuning, train_flow=False),
 }
+
+# Every method this runner can execute: the two frozen-classifier strategies
+# and the two extension runs.
+ALL_STAGE3_METHODS = STAGE3_METHODS + STAGE3_EXTENSION_METHODS
 
 
 @dataclasses.dataclass
@@ -189,7 +205,7 @@ def train_stage3_method(
         ValueError: if `method` is not a Stage 3 method.
     """
     if method not in STRATEGY_TRAINERS:
-        raise ValueError(f"method must be one of {STAGE3_METHODS}, got {method!r}")
+        raise ValueError(f"method must be one of {ALL_STAGE3_METHODS}, got {method!r}")
 
     return STRATEGY_TRAINERS[method](
         data.train_features,
@@ -262,6 +278,7 @@ def stage3_result_fields(
         "baseline_test_accuracy": baseline_test_accuracy,
         "delta_accuracy": test_accuracy - baseline_test_accuracy,
         "num_euler_steps": num_euler_steps,
+        "classifier_trained": train_result.best_classifier_state_dict is not None,
         "best_epoch": train_result.best_epoch,
         "best_val_accuracy": train_result.best_val_accuracy,
         "initial_val_accuracy": train_result.initial_val_accuracy,
@@ -320,9 +337,9 @@ def run_stage3_experiment(
         ValueError: if config.method is not a Stage 3 method, or the frozen
             classifier fails verification.
     """
-    if config.method not in STAGE3_METHODS:
+    if config.method not in ALL_STAGE3_METHODS:
         raise ValueError(
-            f"config.method must be one of {STAGE3_METHODS}, got {config.method!r}"
+            f"config.method must be one of {ALL_STAGE3_METHODS}, got {config.method!r}"
         )
 
     hyperparams = config.stage3
@@ -333,10 +350,19 @@ def run_stage3_experiment(
         config.method, data, frozen.model, hyperparams, config.seed, device, progress
     )
 
+    # An extension run trains the classifier, so the pipeline must be scored
+    # with the classifier it actually ended up with - not the frozen one,
+    # which is only the baseline it is measured against.
+    classifier = frozen.model
+    if train_result.best_classifier_state_dict is not None:
+        classifier = LinearProbe(frozen.feature_dim, frozen.num_classes).to(device)
+        classifier.load_state_dict(train_result.best_classifier_state_dict)
+        classifier.eval()
+
     _, test_accuracy, test_displacement = evaluate_stage3_checkpoint(
         train_result.best_state_dict,
         hyperparams.hidden_dims,
-        frozen.model,
+        classifier,
         data.test_features,
         data.test_labels,
         hyperparams.num_euler_steps,
@@ -362,5 +388,10 @@ def run_stage3_experiment(
     save_run_artifacts(
         config, run_dir, train_result.best_state_dict, train_result.history, fields, device
     )
+    if train_result.best_classifier_state_dict is not None:
+        # Kept beside checkpoint.pt rather than inside it, so every existing
+        # reader - which expects checkpoint.pt to be a velocity network -
+        # keeps working unchanged.
+        torch.save(train_result.best_classifier_state_dict, run_dir / "classifier.pt")
 
     return {**fields, "run_dir": str(run_dir)}

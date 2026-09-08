@@ -14,6 +14,8 @@ import torch
 from src.evaluation.stage3_report import (
     METHOD_PANEL_TITLES,
     Stage3Figures,
+    format_classifier_drift_table,
+    format_stage3_extension_section,
     _tuning_tables,
     class_separation,
     format_class_separation_table,
@@ -441,3 +443,138 @@ def test_the_tuning_section_renders_when_the_file_exists():
     assert "never used for ranking" in text
     assert "### fm_cls_guided on dtd" in text
 
+
+
+# --- The optional extension's reporting ---
+
+
+def _extension_summaries(joint_delta=0.008, rolled_delta=0.002, control_delta=0.003,
+                         joint_std=0.004, rolled_std=0.006):
+    def summary(method, delta, std):
+        return {
+            "dataset": "dtd", "encoder": "e", "method": method,
+            "k_shot": STAGE3_K_SHOT, "num_runs": 3,
+            "mean_test_accuracy": 0.7 + (delta or 0.0),
+            "std_test_accuracy": std,
+            "mean_delta_accuracy": delta, "std_delta_accuracy": 0.001,
+        }
+
+    baseline = summary("linear_probe", 0.0, 0.008)
+    baseline["mean_delta_accuracy"] = None
+    return [
+        baseline,
+        summary("cls_finetune", control_delta, 0.005),
+        summary("fm_cls_rolled", rolled_delta, rolled_std),
+        summary("fm_cls_guided", 0.010, 0.003),
+        summary("fm_cls_joint", joint_delta, joint_std),
+    ]
+
+
+def _drift_rows():
+    return [
+        {"dataset": "dtd", "encoder": "e", "method": "fm_cls_joint", "num_runs": 3,
+         "classifier_drift": 0.2019, "mean_displacement": 0.96},
+        {"dataset": "dtd", "encoder": "e", "method": "cls_finetune", "num_runs": 3,
+         "classifier_drift": 0.0952, "mean_displacement": 0.0},
+    ]
+
+
+def test_the_extension_section_is_omitted_when_it_was_not_run():
+    # The frozen-only summaries carry no extension methods.
+    summaries = [s for s in _extension_summaries()
+                 if s["method"] in ("linear_probe", "fm_cls_rolled")]
+
+    assert format_stage3_extension_section(summaries, [], [("dtd", "e")]) == []
+
+
+def test_the_extension_section_contains_its_parts():
+    text = "\n".join(
+        format_stage3_extension_section(
+            _extension_summaries(), _drift_rows(), [("dtd", "e")]
+        )
+    )
+
+    assert "# Stage 3 Optional Extension" in text
+    assert "## Comparison" in text
+    assert "## Where the adaptation goes" in text
+    assert "### Caveats" in text
+    assert "cls_finetune" in text
+
+
+def test_the_extension_comparison_shows_the_control_column():
+    # Without it the extension cannot be read: part of any gain is simply
+    # training the classifier for longer.
+    text = "\n".join(
+        format_stage3_extension_section(
+            _extension_summaries(), _drift_rows(), [("dtd", "e")]
+        )
+    )
+    header = next(line for line in text.splitlines() if line.startswith("| Dataset |"))
+
+    assert "cls_finetune" in header
+    assert "fm_cls_joint" in header
+    assert "linear_probe" in header
+
+
+def test_the_margin_over_the_frozen_run_is_derived():
+    # joint 0.8% - rolled 0.2% = +0.60 points.
+    text = "\n".join(
+        format_stage3_extension_section(
+            _extension_summaries(joint_delta=0.008, rolled_delta=0.002),
+            _drift_rows(), [("dtd", "e")],
+        )
+    )
+
+    assert "dtd +0.60" in text
+
+
+def test_the_variance_claim_follows_the_measured_spread():
+    # Regression test for a hardcoded claim that was simply false: on one
+    # dataset the frozen run was the *more* consistent of the two.
+    joint_wins = "\n".join(
+        format_stage3_extension_section(
+            _extension_summaries(joint_std=0.002, rolled_std=0.009),
+            _drift_rows(), [("dtd", "e")],
+        )
+    )
+    frozen_wins = "\n".join(
+        format_stage3_extension_section(
+            _extension_summaries(joint_std=0.009, rolled_std=0.002),
+            _drift_rows(), [("dtd", "e")],
+        )
+    )
+
+    assert "in 1 of 1 settings" in joint_wins
+    assert "in 0 of 1 settings" in frozen_wins
+
+
+def test_the_drift_table_reports_both_extension_runs():
+    table = format_classifier_drift_table(_drift_rows())
+
+    assert "Classifier weight drift" in table
+    assert "20.19%" in table
+    assert "9.52%" in table
+
+
+def test_an_empty_drift_table_says_so():
+    assert "No extension runs" in format_classifier_drift_table([])
+
+
+@pytest.mark.parametrize("dataset, encoder", list(STAGE3_SETTINGS.items()))
+def test_real_extension_runs_record_a_classifier_checkpoint(dataset, encoder):
+    from src.utils.config import STAGE3_EXTENSION_METHODS
+
+    for method in STAGE3_EXTENSION_METHODS:
+        run = load_stage3_run(REAL_OUTPUTS, dataset, encoder, method, 0)
+        if run is None:
+            pytest.skip(f"extension not run for {dataset}/{method}")
+        assert run["classifier_state_dict"] is not None
+
+
+@pytest.mark.parametrize("dataset, encoder", list(STAGE3_SETTINGS.items()))
+def test_the_frozen_runs_record_no_classifier_checkpoint(dataset, encoder):
+    for method in STAGE3_METHODS:
+        run = load_stage3_run(REAL_OUTPUTS, dataset, encoder, method, 0)
+        if run is None:
+            pytest.skip(f"Stage 3 not run for {dataset}/{method}")
+        assert run["classifier_state_dict"] is None
