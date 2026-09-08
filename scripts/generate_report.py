@@ -298,8 +298,8 @@ def main() -> None:
     generate_pdf_report(
         summaries, figure_paths, pdf_path,
         loss_curve_figure_paths, confusion_matrix_figure_paths, feature_space_figure_paths,
-        extra_figure_sections=stage2_figures.sections(),
-        title="Stage 1 and Stage 2 Results",
+        extra_figure_sections=stage2_figures.sections() + stage3_figures.sections(),
+        title="Stage 1, Stage 2 and Stage 3 Results",
     )
     print(f"Saved report to {pdf_path}")
 
