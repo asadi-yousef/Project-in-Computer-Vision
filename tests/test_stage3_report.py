@@ -15,6 +15,7 @@ from src.evaluation.stage3_report import (
     METHOD_PANEL_TITLES,
     Stage3Figures,
     format_classifier_drift_table,
+    format_refresh_ablation_section,
     format_stage3_extension_section,
     _tuning_tables,
     class_separation,
@@ -578,3 +579,86 @@ def test_the_frozen_runs_record_no_classifier_checkpoint(dataset, encoder):
         if run is None:
             pytest.skip(f"Stage 3 not run for {dataset}/{method}")
         assert run["classifier_state_dict"] is None
+
+
+# --- the target-recompute ablation ---
+
+
+def _write_ablation(path, rows):
+    """Write an ablation file in the shape save_tuning_results produces."""
+    import json
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    entries = [
+        {
+            "method": "fm_cls_guided", "dataset": "dtd", "encoder": "e",
+            "overrides": {"target_step_size": 0.02, "target_refresh_epochs": interval},
+            "num_seeds": 3,
+            "mean_val_delta": val, "std_val_delta": 0.003,
+            "mean_test_delta": test, "std_test_delta": 0.004,
+            "mean_test_accuracy": 0.7 + test,
+            "mean_baseline_test_accuracy": 0.7,
+            "best_epochs": [10, 20, 30], "mean_displacement": displacement,
+        }
+        for interval, val, test, displacement in rows
+    ]
+    path.write_text(json.dumps(entries), encoding="utf-8")
+
+
+def test_a_missing_ablation_contributes_nothing(tmp_path):
+    assert format_refresh_ablation_section(tmp_path / "absent.json") == []
+
+
+def test_the_ablation_reports_the_cost_of_switching_step_6_off(tmp_path):
+    path = tmp_path / "ablation.json"
+    _write_ablation(path, [
+        (1, 0.016, 0.010, 12.6),
+        (20, 0.012, 0.005, 4.4),
+        (200, 0.004, 0.001, 0.6),
+    ])
+
+    text = "\n".join(format_refresh_ablation_section(path, max_epochs=200))
+
+    assert "## Ablation" in text
+    assert "never refreshed" in text
+    # Best validation is refresh=1 (test +1.00); never-refreshed is +0.10.
+    assert "dtd +1.00 -> +0.10" in text
+    assert "ablation, not a selection" in text
+
+
+def test_the_ablation_names_the_best_interval_it_measured(tmp_path):
+    path = tmp_path / "ablation.json"
+    _write_ablation(path, [
+        (1, 0.004, 0.001, 12.6),
+        (20, 0.019, 0.010, 2.8),
+        (200, 0.011, 0.008, 1.0),
+    ])
+
+    text = "\n".join(format_refresh_ablation_section(path, max_epochs=200))
+
+    assert "dtd every 20" in text
+
+
+def test_the_ablation_labels_the_never_refreshed_row(tmp_path):
+    path = tmp_path / "ablation.json"
+    _write_ablation(path, [(5, 0.01, 0.005, 3.0), (200, 0.004, 0.001, 0.6)])
+
+    text = "\n".join(format_refresh_ablation_section(path, max_epochs=200))
+
+    assert "| 5 epoch(s) |" in text
+    assert "| 200 epochs (never refreshed) |" in text
+
+
+def test_the_real_ablation_covers_the_searched_range_and_beyond():
+    path = REAL_REPORTS / "stage3_refresh_ablation.json"
+    if not path.exists():
+        pytest.skip("ablation not run")
+
+    from src.flow_matching.stage3_tuning import load_tuning_results
+
+    summaries = load_tuning_results(path)
+    intervals = {s.overrides["target_refresh_epochs"] for s in summaries}
+
+    # The searched values plus two past the grid's largest.
+    assert {1, 5, 20}.issubset(intervals)
+    assert max(intervals) >= 200

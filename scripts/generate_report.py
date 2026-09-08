@@ -278,6 +278,7 @@ def main() -> None:
             stage3_figures,
             PROJECT_ROOT,
             tuning_path=reports_dir / "stage3_tuning.json",
+            refresh_ablation_path=reports_dir / "stage3_refresh_ablation.json",
         )
     )
 

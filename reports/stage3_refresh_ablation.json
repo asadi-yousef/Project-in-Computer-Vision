@@ -1,0 +1,232 @@
+[
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01613473892211914,
+    "std_val_delta": 0.004767481024475483,
+    "mean_test_delta": 0.010460972785949707,
+    "std_test_delta": 0.008664375867152421,
+    "mean_test_accuracy": 0.6962765653928121,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      17,
+      86,
+      48
+    ],
+    "mean_displacement": 12.575128237406412
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01471628745396932,
+    "std_val_delta": 0.0021496961483798947,
+    "mean_test_delta": 0.007269501686096191,
+    "std_test_delta": 0.0040625698729239886,
+    "mean_test_accuracy": 0.6930850942929586,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      136,
+      113,
+      26
+    ],
+    "mean_displacement": 7.306677500406901
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.012411336104075113,
+    "std_val_delta": 0.0016250175437047447,
+    "mean_test_delta": 0.0054964423179626465,
+    "std_test_delta": 0.004913625609054608,
+    "mean_test_accuracy": 0.6913120349248251,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      144,
+      181,
+      147
+    ],
+    "mean_displacement": 4.409290552139282
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 50
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.007092177867889404,
+    "std_val_delta": 0.0011072723576826535,
+    "mean_test_delta": 0.0015957355499267578,
+    "std_test_delta": 0.0005319118499755859,
+    "mean_test_accuracy": 0.6874113281567892,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      103,
+      104,
+      101
+    ],
+    "mean_displacement": 1.9001953999201457
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "dtd",
+    "encoder": "dinov2_vits14",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 1,
+      "target_refresh_epochs": 200
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.0037233829498291016,
+    "std_val_delta": 0.0014073064744436984,
+    "mean_test_delta": 0.0010638236999511719,
+    "std_test_delta": 0.0015957355499267578,
+    "mean_test_accuracy": 0.6868794163068136,
+    "mean_baseline_test_accuracy": 0.6858155926068624,
+    "best_epochs": [
+      153,
+      66,
+      2
+    ],
+    "mean_displacement": 0.6004573305447897
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 20
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01895427703857422,
+    "std_val_delta": 0.005744576001768904,
+    "mean_test_delta": 0.01019136110941569,
+    "std_test_delta": 0.003389269108867317,
+    "mean_test_accuracy": 0.842359185218811,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      75,
+      80,
+      41
+    ],
+    "mean_displacement": 2.7686628500620523
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 5
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.01797387997309367,
+    "std_val_delta": 0.0022641357743274173,
+    "mean_test_delta": 0.008185625076293945,
+    "std_test_delta": 0.0038564811303616795,
+    "mean_test_accuracy": 0.8403534491856893,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      32,
+      26,
+      13
+    ],
+    "mean_displacement": 3.1001458962758384
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 50
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.017973860104878742,
+    "std_val_delta": 0.006673413679763984,
+    "mean_test_delta": 0.007751961549123128,
+    "std_test_delta": 0.0049067813746668165,
+    "mean_test_accuracy": 0.8399197856585184,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      184,
+      84,
+      67
+    ],
+    "mean_displacement": 2.1301869551340737
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 1
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.013071894645690918,
+    "std_val_delta": 0.0037117163877197234,
+    "mean_test_delta": -0.0009215275446573893,
+    "std_test_delta": 0.008248197333115494,
+    "mean_test_accuracy": 0.8312462965647379,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      44,
+      12,
+      22
+    ],
+    "mean_displacement": 8.972227414449057
+  },
+  {
+    "method": "fm_cls_guided",
+    "dataset": "flowers102",
+    "encoder": "resnet18",
+    "overrides": {
+      "target_step_size": 0.02,
+      "target_num_steps": 3,
+      "target_refresh_epochs": 200
+    },
+    "num_seeds": 3,
+    "mean_val_delta": 0.011111120382944742,
+    "std_val_delta": 0.0037117032680372766,
+    "mean_test_delta": 0.00829404592514038,
+    "std_test_delta": 0.00144544807985442,
+    "mean_test_accuracy": 0.8404618700345358,
+    "mean_baseline_test_accuracy": 0.8321678241093954,
+    "best_epochs": [
+      92,
+      12,
+      60
+    ],
+    "mean_displacement": 0.9701953728993734
+  }
+]

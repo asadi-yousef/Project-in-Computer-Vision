@@ -350,7 +350,7 @@ The feature-space figures below are two-dimensional projections; this table meas
 
 - **Hyperparameters were selected on validation, which flatters the reported test numbers slightly.** The search ranked 34 configurations in total - 24 for the classifier-guided strategy and 10 for the rolled-out one - on mean validation delta with test held out; against an oracle selecting on test it gave up at most 0.15 points. Compared with the untuned defaults, tuning moved the mean test delta from +0.68 to +0.80, and only one of the four settings improved materially.
 
-- **Two selected configurations sit on a grid boundary.** Both classifier-guided selections took the smallest step size searched, and the Flowers-102 one took the largest refresh interval, so the optimum may lie outside the range explored.
+- **Both classifier-guided selections took the smallest step size searched**, so the optimum may lie below the range explored. The other boundary - Flowers-102 selecting the largest refresh interval - has since been checked and is a genuine interior optimum (see the ablation below).
 
 - **For Flowers-102, K=10 is the entire official training split** (1020 images, 102 classes). That row is a full-data result rather than a few-shot one, and its seeds differ only in initialization.
 
@@ -399,6 +399,40 @@ part_3.pdf asks that changes to the suggested strategies be "clearly described a
 | displacement_penalty=0.0, velocity_penalty=0.1 | +1.01% +/- 0.37 | +0.99% +/- 0.15 | 84.20% | [118, 47, 194] | 1.36 |
 | displacement_penalty=0.1, velocity_penalty=0.0 | +0.95% +/- 0.41 | +1.08% +/- 0.25 | 84.30% | [109, 47, 66] | 1.43 |
 | displacement_penalty=0.3, velocity_penalty=0.1 | +0.95% +/- 0.15 | +0.91% +/- 0.06 | 84.13% | [109, 23, 165] | 1.04 |
+
+## Ablation: does recomputing the targets earn its keep?
+
+part_3.pdf's step 6 asks that the classifier-guided targets be recomputed as the flow changes during training. The search established that recomputing *less* often works better, but its grid stopped at every 20 epochs, so it could not say whether recomputing at all is necessary. Here the refresh interval is varied alone, holding each dataset's selected step size and target-step count fixed. At 200 the targets are built once and never recomputed - step 6 switched off.
+
+This is an **ablation, not a selection**: the reported configuration is still the one the documented search chose, and these numbers did not influence it.
+
+### dtd
+
+| Refresh every | Val delta | Test delta | Mean displacement |
+|---|---|---|---|
+| 1 epoch(s) | +1.61% +/- 0.48 | +1.05% +/- 0.87 | 12.58 |
+| 5 epoch(s) | +1.47% +/- 0.21 | +0.73% +/- 0.41 | 7.31 |
+| 20 epoch(s) | +1.24% +/- 0.16 | +0.55% +/- 0.49 | 4.41 |
+| 50 epoch(s) | +0.71% +/- 0.11 | +0.16% +/- 0.05 | 1.90 |
+| 200 epochs (never refreshed) | +0.37% +/- 0.14 | +0.11% +/- 0.16 | 0.60 |
+
+### flowers102
+
+| Refresh every | Val delta | Test delta | Mean displacement |
+|---|---|---|---|
+| 1 epoch(s) | +1.31% +/- 0.37 | -0.09% +/- 0.82 | 8.97 |
+| 5 epoch(s) | +1.80% +/- 0.23 | +0.82% +/- 0.39 | 3.10 |
+| 20 epoch(s) | +1.90% +/- 0.57 | +1.02% +/- 0.34 | 2.77 |
+| 50 epoch(s) | +1.80% +/- 0.67 | +0.78% +/- 0.49 | 2.13 |
+| 200 epochs (never refreshed) | +1.11% +/- 0.37 | +0.83% +/- 0.14 | 0.97 |
+
+**Switching step 6 off costs dtd +1.05 -> +0.11, flowers102 +1.02 -> +0.83 points.** So the recompute is doing most of the work on one dataset and comparatively little on the other - it is load-bearing rather than decorative, but not equally so everywhere.
+
+**The best interval differs by dataset (dtd every 1, flowers102 every 20), and refreshing every epoch actively hurts Flowers-102** (test -0.09, the only negative result in the sweep) while being the best setting tried on DTD. Refresh frequency is not a knob with a single right answer across settings.
+
+**Displacement falls monotonically as refreshing slows, in both datasets.** That is the compounding effect measured directly: each recompute rebuilds the target from the current transported feature, so more frequent recomputation ratchets the target further from the original.
+
+**This retires half the grid-boundary caveat.** Flowers-102's selected interval of 20 was the largest the search tried, so it could have been a truncation artifact; extending to 50 and 200 shows it is a genuine interior optimum. The step-size boundary is still untested.
 
 ## Stage 3: training curves (10-shot, seed 0)
 

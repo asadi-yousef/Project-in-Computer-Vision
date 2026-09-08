@@ -243,6 +243,21 @@ python scripts/run_stage3_experiments.py --extension   # plus the optional exten
 part_3.pdf marks the extension optional and asks for it only "after completing the
 frozen-classifier experiments".
 
+One further ablation answers a question the search could not:
+
+```bash
+python scripts/ablate_stage3_refresh.py     # does step 6 earn its keep? (~6 min)
+```
+
+part_3.pdf's classifier-guided recipe ends with "recompute the targets as the FM changes
+during training". The search showed recomputing *less* often works better but stopped at every
+20 epochs, so it could not say whether recomputing at all is necessary. This varies the refresh
+interval alone out to `max_epochs`, at which the targets are built once and never recomputed.
+It is deliberately an **ablation, not a selection** — the result is reported and does not change
+`STAGE3_SELECTED_HYPERPARAMS`, so it adds no further validation-based selection to numbers that
+are already slightly optimistic for that reason. Results go to
+`reports/stage3_refresh_ablation.json`.
+
 The search is optional to re-run — its outcome is already recorded in
 `STAGE3_SELECTED_HYPERPARAMS` in `src/utils/config.py`, and the full results in
 `reports/stage3_tuning.json`. It exists because part_3.pdf names specific knobs to
