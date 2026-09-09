@@ -16,6 +16,8 @@ including them.
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
+from src.evaluation.aggregation import method_baseline, method_stage
+
 from PIL import Image as PILImage
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import landscape, letter
@@ -136,8 +138,15 @@ def generate_pdf_report(
     if summary_lines:
         story.append(Spacer(1, 12))
 
+    # Stage and Baseline are carried here for the same reason the Markdown
+    # table carries them: this table spans every stage, and a delta is only
+    # meaningful against the baseline it was measured from, which differs
+    # between Stage 2 and Stage 3.
     table_data = [
-        ["Dataset", "Encoder", "Method", "T", "K-shot", "Runs", "Test Accuracy", "Delta"]
+        [
+            "Dataset", "Encoder", "Stage", "Method", "T", "K-shot", "Runs",
+            "Test Accuracy", "Delta", "Baseline",
+        ]
     ]
     for summary in summaries:
         num_euler_steps = summary.get("num_euler_steps")
@@ -145,12 +154,14 @@ def generate_pdf_report(
             [
                 summary["dataset"],
                 summary["encoder"],
+                method_stage(summary["method"]),
                 summary["method"],
                 "-" if num_euler_steps is None else str(num_euler_steps),
                 str(summary["k_shot"]),
                 str(summary["num_runs"]),
                 _format_accuracy_cell(summary),
                 _format_delta_cell(summary),
+                method_baseline(summary["method"]) or "-",
             ]
         )
 

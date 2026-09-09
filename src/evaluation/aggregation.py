@@ -89,6 +89,54 @@ STAGE3_EXTENSION_COMPARISON_METHODS = (
     "fm_cls_joint",
 )
 
+# Which stage each method belongs to, and which baseline its delta is
+# measured against. Both are properties of the method, so they are recorded
+# here once rather than inferred at each render site.
+#
+# The baseline mapping is the load-bearing half. The combined accuracy table
+# spans all three stages, and a delta is only meaningful against the baseline
+# it was computed from: Stage 2's methods are compared with the prototype
+# classifier and Stage 3's with the linear probe. Without the column, two
+# deltas on adjacent rows of that table look comparable when they are
+# distances from different origins.
+METHOD_STAGES = {
+    "linear_probe": "1",
+    "prototype": "1",
+    "fm_standard": "2",
+    "fm_rolled": "2",
+    "fm_cls_rolled": "3",
+    "fm_cls_guided": "3",
+    "fm_cls_joint": "3 ext",
+    "cls_finetune": "3 ext",
+}
+
+METHOD_BASELINES = {
+    "fm_standard": "prototype",
+    "fm_rolled": "prototype",
+    "fm_cls_rolled": "linear_probe",
+    "fm_cls_guided": "linear_probe",
+    "fm_cls_joint": "linear_probe",
+    "cls_finetune": "linear_probe",
+}
+
+
+def method_stage(method: str) -> str:
+    """Which stage a method belongs to, as a short label for a table cell.
+
+    Returns "?" for a method with no recorded stage, so an unfamiliar run
+    shows up as unclassified rather than silently borrowing another stage's
+    label.
+    """
+    return METHOD_STAGES.get(method, "?")
+
+
+def method_baseline(method: str) -> Optional[str]:
+    """The method whose accuracy this method's delta is measured against.
+
+    None for the Stage 1 baselines, which have nothing to differ from.
+    """
+    return METHOD_BASELINES.get(method)
+
 
 def method_label(method: str, num_euler_steps: Optional[int]) -> str:
     """Human-readable name for a method, including its T when it has one.

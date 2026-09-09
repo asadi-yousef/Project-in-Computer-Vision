@@ -7,7 +7,9 @@ import pytest
 from src.evaluation.aggregation import (
     aggregate_results,
     load_all_results,
+    method_baseline,
     method_label,
+    method_stage,
     summarize_stage3_runs,
 )
 
@@ -321,3 +323,42 @@ def test_a_single_stage3_run_has_no_standard_deviation():
 def test_summarizing_no_stage3_runs_is_empty():
     assert summarize_stage3_runs([]) == []
 
+
+
+# --- stage and baseline attribution ---
+
+
+def test_every_valid_method_has_a_stage_and_a_correct_baseline():
+    from src.utils.config import VALID_METHODS
+
+    for method in VALID_METHODS:
+        assert method_stage(method) != "?", f"{method} has no stage recorded"
+
+    # Stage 1's baselines have nothing to differ from; every later method is
+    # measured against one of them.
+    assert method_baseline("linear_probe") is None
+    assert method_baseline("prototype") is None
+    for method in ("fm_standard", "fm_rolled"):
+        assert method_baseline(method) == "prototype"
+    for method in ("fm_cls_rolled", "fm_cls_guided", "fm_cls_joint", "cls_finetune"):
+        assert method_baseline(method) == "linear_probe"
+
+
+def test_stages_are_labelled_as_expected():
+    assert method_stage("linear_probe") == "1"
+    assert method_stage("fm_standard") == "2"
+    assert method_stage("fm_cls_guided") == "3"
+    assert method_stage("fm_cls_joint") == "3 ext"
+
+
+def test_an_unknown_method_is_marked_unclassified():
+    # Better an explicit "?" than silently borrowing another stage's label.
+    assert method_stage("something_new") == "?"
+    assert method_baseline("something_new") is None
+
+
+def test_the_two_stages_of_flow_matching_use_different_baselines():
+    # The reason the Baseline column exists: a Stage 2 delta and a Stage 3
+    # delta are distances from different origins, so they are not comparable
+    # even on rows that share a dataset, T and K.
+    assert method_baseline("fm_rolled") != method_baseline("fm_cls_rolled")

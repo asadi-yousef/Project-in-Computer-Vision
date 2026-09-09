@@ -249,3 +249,68 @@ def test_the_diagnostics_table_reports_displacement_and_selected_epochs():
 def test_an_empty_diagnostics_table_says_so():
     assert "No Stage 3 runs" in format_stage3_diagnostics_table([])
 
+
+
+# --- the Stage and Baseline columns ---
+
+
+def test_the_accuracy_table_carries_a_stage_and_baseline_column():
+    summaries = [
+        _summary("dtd", "dinov2_vits14", "linear_probe", 0.6858),
+        _summary("dtd", "dinov2_vits14", "fm_cls_rolled", 0.6878, 0.0020),
+    ]
+
+    lines = format_accuracy_table(summaries).strip().splitlines()
+
+    assert "| Stage |" in lines[0]
+    assert lines[0].rstrip().endswith("| Baseline |")
+
+
+def test_stage_1_rows_declare_no_baseline():
+    summaries = [_summary("dtd", "dinov2_vits14", "linear_probe", 0.6858)]
+
+    row = format_accuracy_table(summaries).strip().splitlines()[2]
+
+    assert "| 1 |" in row
+    assert row.rstrip().endswith("| - |")
+
+
+def test_each_stages_rows_name_the_baseline_its_delta_came_from():
+    # The point of the column: these two rows share a dataset, T and K, but
+    # their deltas are measured from different origins.
+    summaries = [
+        {**_summary("dtd", "dinov2_vits14", "fm_rolled", 0.6174, -0.0672),
+         "num_euler_steps": 4},
+        {**_summary("dtd", "dinov2_vits14", "fm_cls_rolled", 0.6878, 0.0020),
+         "num_euler_steps": 4},
+    ]
+
+    rows = format_accuracy_table(summaries).strip().splitlines()[2:]
+    stage2_row = next(r for r in rows if "fm_rolled" in r and "fm_cls" not in r)
+    stage3_row = next(r for r in rows if "fm_cls_rolled" in r)
+
+    assert stage2_row.rstrip().endswith("| prototype |")
+    assert stage3_row.rstrip().endswith("| linear_probe |")
+    assert "| 2 |" in stage2_row
+    assert "| 3 |" in stage3_row
+
+
+def test_the_extension_rows_are_labelled_separately():
+    summaries = [_summary("dtd", "dinov2_vits14", "fm_cls_joint", 0.6941, 0.0083)]
+
+    row = format_accuracy_table(summaries).strip().splitlines()[2]
+
+    assert "| 3 ext |" in row
+    assert row.rstrip().endswith("| linear_probe |")
+
+
+def test_the_table_still_has_one_row_per_summary():
+    summaries = [
+        _summary("dtd", "dinov2_vits14", "linear_probe", 0.6858),
+        _summary("dtd", "dinov2_vits14", "fm_cls_rolled", 0.6878, 0.0020),
+        _summary("flowers102", "resnet18", "fm_cls_guided", 0.8424, 0.0102),
+    ]
+
+    lines = format_accuracy_table(summaries).strip().splitlines()
+
+    assert len(lines) == 2 + 3  # header, separator, three rows

@@ -5,7 +5,9 @@ from typing import List, Optional, Sequence, Tuple
 from src.evaluation.aggregation import (
     METHOD_DISPLAY_ORDER,
     STAGE3_COMPARISON_METHODS,
+    method_baseline,
     method_label,
+    method_stage,
 )
 
 
@@ -25,14 +27,22 @@ def _format_percentage(mean: float, std: Optional[float], signed: bool = False) 
 def format_accuracy_table(summaries: List[dict]) -> str:
     """Render aggregated summaries as a GitHub-flavored Markdown table.
 
-    Columns cover both stages: the Stage 1 methods have no Euler-step count
-    and no baseline to compare against, so their T and delta cells show "-".
+    Columns cover every stage: the Stage 1 methods have no Euler-step count
+    and no baseline to compare against, so their T, delta and baseline cells
+    show "-".
 
     The delta column is the mean of each run's *paired* delta against its own
-    baseline (see `aggregate_results`), not a difference of column means.
+    baseline (see `aggregate_results`), not a difference of column means. The
+    Baseline column names which baseline that is, because it differs by
+    stage - Stage 2 is measured against the prototype classifier and Stage 3
+    against the linear probe - and without it two deltas on adjacent rows
+    look comparable when they are distances from different origins.
     """
-    header = "| Dataset | Encoder | Method | T | K-shot | Runs | Test Accuracy | Delta vs baseline |\n"
-    header += "|---|---|---|---|---|---|---|---|\n"
+    header = (
+        "| Dataset | Encoder | Stage | Method | T | K-shot | Runs "
+        "| Test Accuracy | Delta vs baseline | Baseline |\n"
+    )
+    header += "|---" * 10 + "|\n"
 
     rows = []
     for summary in summaries:
@@ -50,10 +60,12 @@ def format_accuracy_table(summaries: List[dict]) -> str:
                 mean_delta, summary.get("std_delta_accuracy"), signed=True
             )
 
+        baseline = method_baseline(summary["method"])
         rows.append(
-            f"| {summary['dataset']} | {summary['encoder']} | {summary['method']} | "
+            f"| {summary['dataset']} | {summary['encoder']} "
+            f"| {method_stage(summary['method'])} | {summary['method']} | "
             f"{euler_text} | {summary['k_shot']} | {summary['num_runs']} | "
-            f"{accuracy_text} | {delta_text} |"
+            f"{accuracy_text} | {delta_text} | {baseline or '-'} |"
         )
 
     return header + "\n".join(rows) + "\n"
