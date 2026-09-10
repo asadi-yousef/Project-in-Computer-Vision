@@ -502,7 +502,7 @@ def test_the_extension_section_contains_its_parts():
     assert "cls_finetune" in text
 
 
-def test_the_extension_comparison_shows_the_control_column():
+def test_the_extension_comparison_shows_the_control_row():
     # Without it the extension cannot be read: part of any gain is simply
     # training the classifier for longer.
     text = "\n".join(
@@ -510,11 +510,13 @@ def test_the_extension_comparison_shows_the_control_column():
             _extension_summaries(), _drift_rows(), [("dtd", "e")]
         )
     )
-    header = next(line for line in text.splitlines() if line.startswith("| Dataset |"))
+    rows = [line for line in text.splitlines() if line.startswith("| dtd |")]
 
-    assert "cls_finetune" in header
-    assert "fm_cls_joint" in header
-    assert "linear_probe" in header
+    methods = " ".join(rows)
+    assert "Stage 1 linear probe (baseline)" in methods
+    assert "(cls_finetune)" in methods
+    assert "(fm_cls_rolled)" in methods
+    assert "(fm_cls_joint)" in methods
 
 
 def test_the_margin_over_the_frozen_run_is_derived():

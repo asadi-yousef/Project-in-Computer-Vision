@@ -95,6 +95,24 @@ def _add_figure_section(
         story.append(image)
 
 
+def _styled_table(rows: List[List[str]]) -> Table:
+    """A reportlab table in this report's house style: dark header row,
+    alternating row shading, header repeated across page breaks."""
+    table = Table(rows, repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#333333")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f2f2f2")]),
+            ]
+        )
+    )
+    return table
+
+
 def generate_pdf_report(
     summaries: List[dict],
     figure_paths: List[Tuple[str, str, Union[str, Path]]],
@@ -105,6 +123,7 @@ def generate_pdf_report(
     extra_figure_sections: List[Tuple[str, List[Tuple[str, str, Union[str, Path]]]]] = None,
     title: str = "Stage 1 Results",
     summary_lines: Optional[List[str]] = None,
+    extra_tables: Optional[List[Tuple[str, List[List[str]]]]] = None,
 ) -> None:
     """Build a single-file PDF report: accuracy table, accuracy-vs-shot
     plots, and (optionally) loss-curve, confusion-matrix, and feature-space
@@ -126,6 +145,11 @@ def generate_pdf_report(
         title: document title.
         summary_lines: optional plain-text bullet points placed on the first
             page, so the headline findings are visible before the tables.
+        extra_tables: (heading, rows) pairs placed straight after the main
+            accuracy table, where rows is a list of cell lists with the header
+            first. Stage 3 supplies its per-dataset comparison this way: the
+            main table spans every stage, and part_3.pdf asks for the Stage 1
+            linear probe and both Stage 3 methods side by side per dataset.
     """
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -165,19 +189,12 @@ def generate_pdf_report(
             ]
         )
 
-    table = Table(table_data, repeatRows=1)
-    table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#333333")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f2f2f2")]),
-            ]
-        )
-    )
-    story.append(table)
+    story.append(_styled_table(table_data))
+
+    for heading, rows in extra_tables or []:
+        story.append(Spacer(1, 16))
+        story.append(Paragraph(heading, styles["Heading2"]))
+        story.append(_styled_table(rows))
 
     _add_figure_section(story, styles, "Accuracy vs. training-set size", figure_paths)
     _add_figure_section(

@@ -164,42 +164,57 @@ def _summary(dataset, encoder, method, accuracy, delta=None, std=0.005):
     }
 
 
-def test_the_comparison_table_puts_the_three_methods_side_by_side():
+def test_the_comparison_table_lists_the_baseline_and_both_strategies():
+    # part_3.pdf: "Report top-1 test accuracy for the Stage 1 linear probe and
+    # both Stage 3 methods ... Also report the change relative to the
+    # corresponding linear-probe baseline."
     summaries = [
         _summary("dtd", "dinov2_vits14", "linear_probe", 0.6858),
         _summary("dtd", "dinov2_vits14", "fm_cls_rolled", 0.6878, 0.0020),
         _summary("dtd", "dinov2_vits14", "fm_cls_guided", 0.6963, 0.0105),
     ]
 
-    table = format_stage3_comparison_table(summaries, [("dtd", "dinov2_vits14")])
-    lines = table.strip().splitlines()
+    lines = format_stage3_comparison_table(
+        summaries, [("dtd", "dinov2_vits14")]
+    ).strip().splitlines()
 
-    assert lines[0].startswith("| Dataset | Encoder | linear_probe |")
-    assert "fm_cls_rolled" in lines[0] and "fm_cls_guided" in lines[0]
-    assert len(lines) == 3  # header, separator, one dataset row
-    assert "68.58%" in lines[2] and "(+0.20)" in lines[2] and "(+1.05)" in lines[2]
+    assert lines[0] == (
+        "| Dataset | Encoder | Method | Test accuracy "
+        "| Change vs. Stage 1 linear probe |"
+    )
+    assert len(lines) == 2 + 3  # header, separator, one row per method
+    assert "Stage 1 linear probe (baseline)" in lines[2] and "68.58%" in lines[2]
+    assert "Strategy 1" in lines[3] and "+0.20%" in lines[3]
+    assert "Strategy 2" in lines[4] and "+1.05%" in lines[4]
 
 
-def test_the_comparison_table_has_one_row_per_setting():
+def test_the_comparison_table_has_a_row_per_method_per_setting():
     summaries = [
         _summary("dtd", "dinov2_vits14", "linear_probe", 0.6858),
         _summary("flowers102", "resnet18", "linear_probe", 0.8322),
     ]
 
     lines = format_stage3_comparison_table(summaries, SETTINGS).strip().splitlines()
+    body = lines[2:]
 
-    assert len(lines) == 4
-    assert lines[2].startswith("| dtd |")
-    assert lines[3].startswith("| flowers102 |")
+    assert len(body) == 2 * 3  # two settings, three methods each
+    assert all(row.startswith("| dtd |") for row in body[:3])
+    assert all(row.startswith("| flowers102 |") for row in body[3:])
 
 
 def test_missing_methods_render_as_not_available():
-    # A partially-completed sweep must still produce a readable table.
+    # A partially-completed sweep must still produce a readable table: the
+    # missing methods keep their rows, with both numeric cells marked.
     summaries = [_summary("dtd", "dinov2_vits14", "linear_probe", 0.6858)]
 
-    table = format_stage3_comparison_table(summaries, [("dtd", "dinov2_vits14")])
+    body = format_stage3_comparison_table(
+        summaries, [("dtd", "dinov2_vits14")]
+    ).strip().splitlines()[2:]
 
-    assert table.count("n/a") == 2
+    assert len(body) == 3
+    assert "n/a" not in body[0]
+    assert body[1].endswith("| n/a | n/a |")
+    assert body[2].endswith("| n/a | n/a |")
 
 
 def test_the_baseline_shows_no_delta():
@@ -314,3 +329,36 @@ def test_the_table_still_has_one_row_per_summary():
     lines = format_accuracy_table(summaries).strip().splitlines()
 
     assert len(lines) == 2 + 3  # header, separator, three rows
+
+
+def test_the_change_column_carries_its_own_spread():
+    # The paired delta has its own standard deviation, which is not the
+    # difference of the accuracy spreads - and the old layout dropped it.
+    summaries = [
+        _summary("dtd", "dinov2_vits14", "linear_probe", 0.6858),
+        _summary("dtd", "dinov2_vits14", "fm_cls_guided", 0.6963, 0.0105),
+    ]
+
+    row = format_stage3_comparison_table(
+        summaries, [("dtd", "dinov2_vits14")], methods=["linear_probe", "fm_cls_guided"]
+    ).strip().splitlines()[3]
+
+    assert row.endswith("| +1.05% +/- 0.20% |")
+
+
+def test_markdown_and_pdf_render_the_same_rows():
+    # Both renderers consume stage3_comparison_rows, so the Markdown table and
+    # the PDF table cannot disagree.
+    from src.evaluation.tables import rows_to_markdown, stage3_comparison_rows
+
+    summaries = [
+        _summary("dtd", "dinov2_vits14", "linear_probe", 0.6858),
+        _summary("dtd", "dinov2_vits14", "fm_cls_rolled", 0.6878, 0.0020),
+    ]
+    rows = stage3_comparison_rows(summaries, [("dtd", "dinov2_vits14")])
+
+    assert rows_to_markdown(rows) == format_stage3_comparison_table(
+        summaries, [("dtd", "dinov2_vits14")]
+    )
+    assert rows[0][-1] == "Change vs. Stage 1 linear probe"
+

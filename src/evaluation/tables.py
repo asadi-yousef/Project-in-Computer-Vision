@@ -113,35 +113,58 @@ def format_flow_matching_comparison_table(summaries: List[dict], dataset: str, e
     return header + "\n".join(rows) + "\n"
 
 
-def format_stage3_comparison_table(
+# How each method is named in the Stage 3 comparison tables. part_3.pdf
+# describes the comparison in words - "Stage 1 linear probe; end-to-end
+# rolled-out classification training; classifier-guided FM training" - so
+# the rows use those words, with the code name kept alongside so a reader can
+# match a row to the rest of the report. The baseline is labelled as such,
+# because a column or row headed only `linear_probe` does not say that every
+# delta in the table is measured from it.
+STAGE3_METHOD_LABELS = {
+    "linear_probe": "Stage 1 linear probe (baseline)",
+    "fm_cls_rolled": "Strategy 1: end-to-end rolled-out (fm_cls_rolled)",
+    "fm_cls_guided": "Strategy 2: classifier-guided FM (fm_cls_guided)",
+    "cls_finetune": "Control: classifier fine-tuned alone (cls_finetune)",
+    "fm_cls_joint": "Extension: joint FM + classifier (fm_cls_joint)",
+}
+
+STAGE3_COMPARISON_HEADER = [
+    "Dataset", "Encoder", "Method", "Test accuracy", "Change vs. Stage 1 linear probe",
+]
+
+
+def stage3_comparison_rows(
     summaries: List[dict],
     settings: Sequence[Tuple[str, str]],
     k_shot=10,
     methods: Sequence[str] = STAGE3_COMPARISON_METHODS,
-) -> str:
-    """Render part_3.pdf's main comparison: one row per dataset, three methods.
+) -> List[List[str]]:
+    """part_3.pdf's main comparison, as row data: header first, then one row
+    per method per dataset.
 
-    part_3.pdf asks to compare, for each of the two datasets, the Stage 1
-    linear probe against both Stage 3 methods, and to "also report the change
-    relative to the corresponding linear-probe baseline". The general
-    accuracy table spreads those three conditions across three rows per
-    dataset; this puts them side by side, baseline first.
+    Built as data rather than as Markdown so the Markdown table and the PDF
+    table render from one source and cannot disagree.
 
-    Every method within a row uses the same encoder, training subset and
-    pretrained classifier, as part_3.pdf requires - that is a property of how
-    the runs were produced, not of this renderer, but it is what makes the
-    row comparable at all.
+    One row per method rather than one column per method, so that the
+    baseline is a labelled row of its own and the change column can name
+    what it is relative to - neither of which a column headed `linear_probe`
+    manages. The change is each run's *paired* delta against its own Stage 1
+    checkpoint, averaged, with its own standard deviation; it is not the
+    difference of the two accuracy columns.
 
-    Settings absent from `summaries` render as "n/a" rather than raising, so
-    a partially-completed sweep still produces a readable table.
+    Settings or methods absent from `summaries` render as "n/a" rather than
+    raising, so a partially-completed sweep still produces a readable table.
 
     Args:
         summaries: aggregated summaries from `aggregate_results`.
-        settings: the (dataset, encoder) pairs to show, one row each.
+        settings: the (dataset, encoder) pairs to show.
         k_shot: the training-set size Stage 3 used.
-        methods: the columns, in order. Defaults to the three conditions
+        methods: which conditions to show, in order. Defaults to the three
             part_3.pdf's main comparison names; the optional extension passes
             its own set.
+
+    Returns:
+        A list of rows, each a list of cell strings; the first is the header.
     """
     by_setting = {
         (s["dataset"], s["encoder"], s["method"]): s
@@ -149,27 +172,50 @@ def format_stage3_comparison_table(
         if s["k_shot"] == k_shot
     }
 
-    header = "| Dataset | Encoder | " + " | ".join(methods) + " |\n"
-    header += "|---" * (len(methods) + 2) + "|\n"
-
-    rows = []
+    rows = [list(STAGE3_COMPARISON_HEADER)]
     for dataset, encoder in settings:
-        cells = []
         for method in methods:
+            label = STAGE3_METHOD_LABELS.get(method, method)
             summary = by_setting.get((dataset, encoder, method))
             if summary is None:
-                cells.append("n/a")
+                rows.append([dataset, encoder, label, "n/a", "n/a"])
                 continue
-            text = _format_percentage(
+
+            accuracy = _format_percentage(
                 summary["mean_test_accuracy"], summary["std_test_accuracy"]
             )
             mean_delta = summary.get("mean_delta_accuracy")
-            if mean_delta is not None:
-                text += f" ({mean_delta * 100:+.2f})"
-            cells.append(text)
-        rows.append(f"| {dataset} | {encoder} | " + " | ".join(cells) + " |")
+            change = (
+                "-"
+                if mean_delta is None
+                else _format_percentage(
+                    mean_delta, summary.get("std_delta_accuracy"), signed=True
+                )
+            )
+            rows.append([dataset, encoder, label, accuracy, change])
 
-    return header + "\n".join(rows) + "\n"
+    return rows
+
+
+def rows_to_markdown(rows: List[List[str]]) -> str:
+    """Render row data (header first) as a GitHub-flavoured Markdown table."""
+    header, *body = rows
+    lines = ["| " + " | ".join(header) + " |", "|---" * len(header) + "|"]
+    lines.extend("| " + " | ".join(row) + " |" for row in body)
+    return "\n".join(lines) + "\n"
+
+
+def format_stage3_comparison_table(
+    summaries: List[dict],
+    settings: Sequence[Tuple[str, str]],
+    k_shot=10,
+    methods: Sequence[str] = STAGE3_COMPARISON_METHODS,
+) -> str:
+    """Render part_3.pdf's main comparison as Markdown.
+
+    See `stage3_comparison_rows` for the layout and why.
+    """
+    return rows_to_markdown(stage3_comparison_rows(summaries, settings, k_shot, methods))
 
 
 def format_stage3_diagnostics_table(stage3_summaries: List[dict]) -> str:
@@ -210,4 +256,6 @@ __all__ = [
     "format_flow_matching_comparison_table",
     "format_stage3_comparison_table",
     "format_stage3_diagnostics_table",
+    "rows_to_markdown",
+    "stage3_comparison_rows",
 ]

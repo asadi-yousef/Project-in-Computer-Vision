@@ -299,10 +299,14 @@ Following part_3.pdf's narrowed scope: one representative encoder per dataset, K
 
 ## Main comparison
 
-| Dataset | Encoder | linear_probe | fm_cls_rolled | fm_cls_guided |
+| Dataset | Encoder | Method | Test accuracy | Change vs. Stage 1 linear probe |
 |---|---|---|---|---|
-| dtd | dinov2_vits14 | 68.58% +/- 0.80% | 68.78% +/- 0.61% (+0.20) | 69.63% +/- 0.37% (+1.05) |
-| flowers102 | resnet18 | 83.22% +/- 0.14% | 84.15% +/- 0.06% (+0.93) | 84.24% +/- 0.36% (+1.02) |
+| dtd | dinov2_vits14 | Stage 1 linear probe (baseline) | 68.58% +/- 0.80% | - |
+| dtd | dinov2_vits14 | Strategy 1: end-to-end rolled-out (fm_cls_rolled) | 68.78% +/- 0.61% | +0.20% +/- 0.19% |
+| dtd | dinov2_vits14 | Strategy 2: classifier-guided FM (fm_cls_guided) | 69.63% +/- 0.37% | +1.05% +/- 0.87% |
+| flowers102 | resnet18 | Stage 1 linear probe (baseline) | 83.22% +/- 0.14% | - |
+| flowers102 | resnet18 | Strategy 1: end-to-end rolled-out (fm_cls_rolled) | 84.15% +/- 0.06% | +0.93% +/- 0.08% |
+| flowers102 | resnet18 | Strategy 2: classifier-guided FM (fm_cls_guided) | 84.24% +/- 0.36% | +1.02% +/- 0.34% |
 
 
 ## Training and selection diagnostics
@@ -467,10 +471,16 @@ part_3.pdf: "you may also unfreeze the pretrained linear classifier and jointly 
 
 ## Comparison
 
-| Dataset | Encoder | linear_probe | cls_finetune | fm_cls_rolled | fm_cls_joint |
-|---|---|---|---|---|---|
-| dtd | dinov2_vits14 | 68.58% +/- 0.80% | 68.90% +/- 0.80% (+0.32) | 68.78% +/- 0.61% (+0.20) | 69.41% +/- 0.35% (+0.83) |
-| flowers102 | resnet18 | 83.22% +/- 0.14% | 83.43% +/- 0.07% (+0.22) | 84.15% +/- 0.06% (+0.93) | 84.22% +/- 0.09% (+1.00) |
+| Dataset | Encoder | Method | Test accuracy | Change vs. Stage 1 linear probe |
+|---|---|---|---|---|
+| dtd | dinov2_vits14 | Stage 1 linear probe (baseline) | 68.58% +/- 0.80% | - |
+| dtd | dinov2_vits14 | Control: classifier fine-tuned alone (cls_finetune) | 68.90% +/- 0.80% | +0.32% +/- 0.00% |
+| dtd | dinov2_vits14 | Strategy 1: end-to-end rolled-out (fm_cls_rolled) | 68.78% +/- 0.61% | +0.20% +/- 0.19% |
+| dtd | dinov2_vits14 | Extension: joint FM + classifier (fm_cls_joint) | 69.41% +/- 0.35% | +0.83% +/- 0.46% |
+| flowers102 | resnet18 | Stage 1 linear probe (baseline) | 83.22% +/- 0.14% | - |
+| flowers102 | resnet18 | Control: classifier fine-tuned alone (cls_finetune) | 83.43% +/- 0.07% | +0.22% +/- 0.17% |
+| flowers102 | resnet18 | Strategy 1: end-to-end rolled-out (fm_cls_rolled) | 84.15% +/- 0.06% | +0.93% +/- 0.08% |
+| flowers102 | resnet18 | Extension: joint FM + classifier (fm_cls_joint) | 84.22% +/- 0.09% | +1.00% +/- 0.14% |
 
 
 ## Where the adaptation goes

@@ -38,7 +38,8 @@ from src.evaluation.stage3_report import (
     generate_stage3_figures,
     measure_classifier_drift,
 )
-from src.evaluation.tables import format_accuracy_table
+from src.evaluation.aggregation import STAGE3_EXTENSION_COMPARISON_METHODS
+from src.evaluation.tables import format_accuracy_table, stage3_comparison_rows
 from src.features.loading import load_validated_feature_cache
 from src.visualization.accuracy_vs_shot import plot_accuracy_vs_shot
 from src.visualization.confusion_matrix_plot import plot_confusion_matrix
@@ -300,6 +301,19 @@ def main() -> None:
         loss_curve_figure_paths, confusion_matrix_figure_paths, feature_space_figure_paths,
         extra_figure_sections=stage2_figures.sections() + stage3_figures.sections(),
         title="Stage 1, Stage 2 and Stage 3 Results",
+        extra_tables=[
+            (
+                "Stage 3: Stage 1 linear probe vs. both Stage 3 strategies",
+                stage3_comparison_rows(summaries, stage3_settings),
+            ),
+            (
+                "Stage 3 optional extension: jointly fine-tuning the classifier",
+                stage3_comparison_rows(
+                    summaries, stage3_settings,
+                    methods=STAGE3_EXTENSION_COMPARISON_METHODS,
+                ),
+            ),
+        ],
     )
     print(f"Saved report to {pdf_path}")
 
