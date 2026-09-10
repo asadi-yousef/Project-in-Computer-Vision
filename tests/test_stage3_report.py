@@ -390,7 +390,7 @@ def test_the_section_contains_every_required_part(tmp_path):
 
     assert "# Stage 3 Results: FM Before a Linear Classifier" in text
     assert "## Main comparison" in text
-    assert "## Training and selection diagnostics" in text
+    assert "## Validation results" in text
     assert "## Class structure in the full feature space" in text
     assert "## Observations" in text
     assert "### Caveats" in text
@@ -664,3 +664,25 @@ def test_the_real_ablation_covers_the_searched_range_and_beyond():
     # The searched values plus two past the grid's largest.
     assert {1, 5, 20}.issubset(intervals)
     assert max(intervals) >= 200
+
+
+def test_the_validation_table_leaves_the_extension_to_its_own_section(tmp_path):
+    # The optional extension has its own section; its runs must not appear
+    # in the main Stage 3 section's validation table.
+    def summary(method):
+        return {
+            "dataset": "dtd", "encoder": "e", "method": method, "k_shot": STAGE3_K_SHOT,
+            "num_runs": 3, "mean_val_delta": 0.01, "std_val_delta": 0.002,
+            "mean_initial_val_accuracy": 0.68, "mean_best_val_accuracy": 0.69,
+            "mean_displacement": 1.0, "best_epochs": [1, 2, 3],
+        }
+
+    stage3_summaries = [summary(m) for m in (
+        "fm_cls_rolled", "fm_cls_guided", "fm_cls_joint", "cls_finetune",
+    )]
+    text = "\n".join(format_stage3_section([], stage3_summaries, [], [], Stage3Figures(), tmp_path))
+    section = text.split("## Validation results")[1].split("## Class structure")[0]
+
+    assert "fm_cls_rolled" in section and "fm_cls_guided" in section
+    assert "fm_cls_joint" not in section and "cls_finetune" not in section
+

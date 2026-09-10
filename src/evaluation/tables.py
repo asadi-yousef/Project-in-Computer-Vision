@@ -219,22 +219,19 @@ def format_stage3_comparison_table(
 
 
 def format_stage3_diagnostics_table(stage3_summaries: List[dict]) -> str:
-    """Render the Stage 3-only measurements from `summarize_stage3_runs`.
+    """Render validation accuracy for the Stage 3 runs.
 
-    Supporting evidence for the observations rather than a required
-    deliverable. The displacement column is the one to read alongside the
-    accuracy: a flow that gains accuracy while moving features a small
-    fraction of their own norm is doing something different from one that
-    moves them further than they are long.
+    The validation split is the one checkpoints and hyperparameters were
+    selected on, so this is the view that selection saw; the main comparison
+    reports the held-out test split. "Baseline val" is the untrained
+    pipeline's validation accuracy, which equals the Stage 1 linear probe's
+    because the flow starts as the exact identity.
     """
     if not stage3_summaries:
         return "_No Stage 3 runs._"
 
-    header = (
-        "| Dataset | Method | Runs | Baseline val | Best val | Val delta "
-        "| Selected epochs | Mean displacement |\n"
-    )
-    header += "|---" * 8 + "|\n"
+    header = "| Dataset | Method | Runs | Baseline val | Best val | Val delta |\n"
+    header += "|---" * 6 + "|\n"
 
     rows = []
     for summary in stage3_summaries:
@@ -242,9 +239,7 @@ def format_stage3_diagnostics_table(stage3_summaries: List[dict]) -> str:
             f"| {summary['dataset']} | {summary['method']} | {summary['num_runs']} "
             f"| {summary['mean_initial_val_accuracy'] * 100:.2f}% "
             f"| {summary['mean_best_val_accuracy'] * 100:.2f}% "
-            f"| {_format_percentage(summary['mean_val_delta'], summary['std_val_delta'], signed=True)} "
-            f"| {summary['best_epochs']} "
-            f"| {summary['mean_displacement']:.2f} |"
+            f"| {_format_percentage(summary['mean_val_delta'], summary['std_val_delta'], signed=True)} |"
         )
 
     return header + "\n".join(rows) + "\n"

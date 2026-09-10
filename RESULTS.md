@@ -309,18 +309,16 @@ Following part_3.pdf's narrowed scope: one representative encoder per dataset, K
 | flowers102 | resnet18 | Strategy 2: classifier-guided FM (fm_cls_guided) | 84.24% +/- 0.36% | +1.02% +/- 0.34% |
 
 
-## Training and selection diagnostics
+## Validation results
 
-| Dataset | Method | Runs | Baseline val | Best val | Val delta | Selected epochs | Mean displacement |
-|---|---|---|---|---|---|---|---|
-| dtd | fm_cls_rolled | 3 | 68.12% | 68.56% | +0.44% +/- 0.31% | [150, 128, 105] | 1.92 |
-| dtd | fm_cls_guided | 3 | 68.12% | 69.73% | +1.61% +/- 0.48% | [17, 86, 48] | 12.58 |
-| dtd | cls_finetune | 3 | 68.12% | 68.51% | +0.39% +/- 0.21% | [26, 54, 7] | 0.00 |
-| dtd | fm_cls_joint | 3 | 68.12% | 69.17% | +1.05% +/- 0.22% | [178, 139, 192] | 0.96 |
-| flowers102 | fm_cls_rolled | 3 | 86.44% | 87.58% | +1.14% +/- 0.34% | [24, 40, 178] | 1.26 |
-| flowers102 | fm_cls_guided | 3 | 86.44% | 88.33% | +1.90% +/- 0.57% | [75, 80, 41] | 2.77 |
-| flowers102 | cls_finetune | 3 | 86.44% | 86.76% | +0.33% +/- 0.20% | [191, 5, 155] | 0.00 |
-| flowers102 | fm_cls_joint | 3 | 86.44% | 87.78% | +1.34% +/- 0.23% | [57, 136, 70] | 0.83 |
+Accuracy on the validation split, which checkpoints and hyperparameters were selected on. The table above reports the held-out test split.
+
+| Dataset | Method | Runs | Baseline val | Best val | Val delta |
+|---|---|---|---|---|---|
+| dtd | fm_cls_rolled | 3 | 68.12% | 68.56% | +0.44% +/- 0.31% |
+| dtd | fm_cls_guided | 3 | 68.12% | 69.73% | +1.61% +/- 0.48% |
+| flowers102 | fm_cls_rolled | 3 | 86.44% | 87.58% | +1.14% +/- 0.34% |
+| flowers102 | fm_cls_guided | 3 | 86.44% | 88.33% | +1.90% +/- 0.57% |
 
 
 ## Class structure in the full feature space

@@ -658,8 +658,14 @@ def format_stage3_section(
         "delta below starts from precisely zero.\n",
         "## Main comparison\n",
         format_stage3_comparison_table(summaries, settings, STAGE3_K_SHOT),
-        "\n## Training and selection diagnostics\n",
-        format_stage3_diagnostics_table(stage3_summaries),
+        "\n## Validation results\n",
+        "Accuracy on the validation split, which checkpoints and hyperparameters "
+        "were selected on. The table above reports the held-out test split.\n",
+        # Only the two Stage 3 strategies: the optional extension is reported
+        # in its own section further down.
+        format_stage3_diagnostics_table(
+            [s for s in stage3_summaries if s["method"] in STAGE3_METHODS]
+        ),
         "\n## Class structure in the full feature space\n",
         "The feature-space figures below are two-dimensional projections; this "
         "table measures the same property in the space the classifier actually "

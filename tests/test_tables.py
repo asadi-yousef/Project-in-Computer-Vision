@@ -248,7 +248,7 @@ def _diagnostic(dataset, method, val_delta, displacement, epochs):
     }
 
 
-def test_the_diagnostics_table_reports_displacement_and_selected_epochs():
+def test_the_validation_table_reports_accuracy_only():
     summaries = [
         _diagnostic("dtd", "fm_cls_rolled", 0.0044, 1.92, [150, 128, 105]),
         _diagnostic("dtd", "fm_cls_guided", 0.0161, 12.58, [17, 86, 48]),
@@ -256,9 +256,12 @@ def test_the_diagnostics_table_reports_displacement_and_selected_epochs():
 
     lines = format_stage3_diagnostics_table(summaries).strip().splitlines()
 
-    assert "Mean displacement" in lines[0]
-    assert "1.92" in lines[2] and "[150, 128, 105]" in lines[2]
-    assert "12.58" in lines[3] and "+1.61%" in lines[3]
+    assert lines[0] == "| Dataset | Method | Runs | Baseline val | Best val | Val delta |"
+    assert "+0.44%" in lines[2]
+    assert "+1.61%" in lines[3]
+    # The two columns taken out: neither the epochs nor the displacement.
+    assert "[150, 128, 105]" not in lines[2] and "1.92" not in lines[2]
+    assert "Selected epochs" not in lines[0] and "displacement" not in lines[0]
 
 
 def test_an_empty_diagnostics_table_says_so():
