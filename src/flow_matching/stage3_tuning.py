@@ -333,6 +333,10 @@ def format_tuning_table(summaries: Sequence[TuningSummary], top_n: Optional[int]
     The validation column is the one selection used; the test column is
     reported alongside so a reader can see how well the choice transferred.
 
+    The selected epochs and mean displacement each configuration produced
+    are not shown - they are kept in the saved results, where `select_best`
+    still uses displacement to break ties, and in reports/stage3_tuning.json.
+
     Args:
         summaries: results for one (method, dataset, encoder), already sorted.
         top_n: show only this many rows, or all of them if None.
@@ -347,15 +351,14 @@ def format_tuning_table(summaries: Sequence[TuningSummary], top_n: Optional[int]
         return percent if std is None else f"{percent} +/- {std * 100:.2f}"
 
     lines = [
-        "| Configuration | Val delta (selection) | Test delta | Test accuracy | Best epochs | Displacement |",
-        "|---|---|---|---|---|---|",
+        "| Configuration | Val delta (selection) | Test delta | Test accuracy |",
+        "|---|---|---|---|",
     ]
     for summary in rows:
         lines.append(
             f"| {summary.label} | {cell(summary.mean_val_delta, summary.std_val_delta)} "
             f"| {cell(summary.mean_test_delta, summary.std_test_delta)} "
-            f"| {summary.mean_test_accuracy * 100:.2f}% "
-            f"| {summary.best_epochs} | {summary.mean_displacement:.2f} |"
+            f"| {summary.mean_test_accuracy * 100:.2f}% |"
         )
     return "\n".join(lines)
 

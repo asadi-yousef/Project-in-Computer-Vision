@@ -364,43 +364,43 @@ part_3.pdf asks that changes to the suggested strategies be "clearly described a
 
 ### fm_cls_guided on dtd
 
-| Configuration | Val delta (selection) | Test delta | Test accuracy | Best epochs | Displacement |
-|---|---|---|---|---|---|
-| target_num_steps=1, target_refresh_epochs=1, target_step_size=0.02 | +1.61% +/- 0.48 | +1.05% +/- 0.87 | 69.63% | [17, 86, 48] | 12.58 |
-| target_num_steps=1, target_refresh_epochs=20, target_step_size=0.2 | +1.60% +/- 0.51 | +0.96% +/- 0.67 | 69.54% | [3, 78, 49] | 8.91 |
-| target_num_steps=3, target_refresh_epochs=1, target_step_size=0.05 | +1.58% +/- 0.40 | +0.48% +/- 0.65 | 69.06% | [4, 200, 200] | 205.41 |
-| target_num_steps=3, target_refresh_epochs=1, target_step_size=0.02 | +1.52% +/- 0.21 | +0.80% +/- 0.59 | 69.38% | [3, 123, 5] | 59.73 |
-| target_num_steps=1, target_refresh_epochs=1, target_step_size=0.05 | +1.49% +/- 0.14 | +0.99% +/- 0.16 | 69.57% | [3, 9, 16] | 6.94 |
+| Configuration | Val delta (selection) | Test delta | Test accuracy |
+|---|---|---|---|
+| target_num_steps=1, target_refresh_epochs=1, target_step_size=0.02 | +1.61% +/- 0.48 | +1.05% +/- 0.87 | 69.63% |
+| target_num_steps=1, target_refresh_epochs=20, target_step_size=0.2 | +1.60% +/- 0.51 | +0.96% +/- 0.67 | 69.54% |
+| target_num_steps=3, target_refresh_epochs=1, target_step_size=0.05 | +1.58% +/- 0.40 | +0.48% +/- 0.65 | 69.06% |
+| target_num_steps=3, target_refresh_epochs=1, target_step_size=0.02 | +1.52% +/- 0.21 | +0.80% +/- 0.59 | 69.38% |
+| target_num_steps=1, target_refresh_epochs=1, target_step_size=0.05 | +1.49% +/- 0.14 | +0.99% +/- 0.16 | 69.57% |
 
 ### fm_cls_guided on flowers102
 
-| Configuration | Val delta (selection) | Test delta | Test accuracy | Best epochs | Displacement |
-|---|---|---|---|---|---|
-| target_num_steps=3, target_refresh_epochs=20, target_step_size=0.02 | +1.90% +/- 0.57 | +1.02% +/- 0.34 | 84.24% | [75, 80, 41] | 2.77 |
-| target_num_steps=1, target_refresh_epochs=20, target_step_size=0.1 | +1.86% +/- 0.35 | +1.01% +/- 0.67 | 84.23% | [23, 28, 31] | 2.63 |
-| target_num_steps=1, target_refresh_epochs=20, target_step_size=0.05 | +1.83% +/- 0.37 | +0.86% +/- 0.55 | 84.07% | [146, 48, 58] | 2.82 |
-| target_num_steps=3, target_refresh_epochs=5, target_step_size=0.02 | +1.80% +/- 0.23 | +0.82% +/- 0.39 | 84.04% | [32, 26, 13] | 3.10 |
-| target_num_steps=3, target_refresh_epochs=5, target_step_size=0.05 | +1.76% +/- 0.39 | +0.16% +/- 0.46 | 83.37% | [14, 16, 22] | 5.01 |
+| Configuration | Val delta (selection) | Test delta | Test accuracy |
+|---|---|---|---|
+| target_num_steps=3, target_refresh_epochs=20, target_step_size=0.02 | +1.90% +/- 0.57 | +1.02% +/- 0.34 | 84.24% |
+| target_num_steps=1, target_refresh_epochs=20, target_step_size=0.1 | +1.86% +/- 0.35 | +1.01% +/- 0.67 | 84.23% |
+| target_num_steps=1, target_refresh_epochs=20, target_step_size=0.05 | +1.83% +/- 0.37 | +0.86% +/- 0.55 | 84.07% |
+| target_num_steps=3, target_refresh_epochs=5, target_step_size=0.02 | +1.80% +/- 0.23 | +0.82% +/- 0.39 | 84.04% |
+| target_num_steps=3, target_refresh_epochs=5, target_step_size=0.05 | +1.76% +/- 0.39 | +0.16% +/- 0.46 | 83.37% |
 
 ### fm_cls_rolled on dtd
 
-| Configuration | Val delta (selection) | Test delta | Test accuracy | Best epochs | Displacement |
-|---|---|---|---|---|---|
-| displacement_penalty=0.03, velocity_penalty=0.0 | +0.44% +/- 0.31 | +0.20% +/- 0.19 | 68.78% | [150, 128, 105] | 1.92 |
-| displacement_penalty=0.0, velocity_penalty=0.1 | +0.34% +/- 0.22 | -0.11% +/- 0.43 | 68.48% | [136, 146, 154] | 1.96 |
-| displacement_penalty=0.1, velocity_penalty=0.0 | +0.28% +/- 0.27 | +0.21% +/- 0.24 | 68.79% | [130, 134, 60] | 1.31 |
-| displacement_penalty=0.1, velocity_penalty=0.1 | +0.28% +/- 0.27 | -0.00% +/- 0.24 | 68.58% | [176, 50, 93] | 2.61 |
-| displacement_penalty=0.03, velocity_penalty=0.1 | +0.25% +/- 0.30 | +0.16% +/- 0.19 | 68.74% | [156, 100, 53] | 1.22 |
+| Configuration | Val delta (selection) | Test delta | Test accuracy |
+|---|---|---|---|
+| displacement_penalty=0.03, velocity_penalty=0.0 | +0.44% +/- 0.31 | +0.20% +/- 0.19 | 68.78% |
+| displacement_penalty=0.0, velocity_penalty=0.1 | +0.34% +/- 0.22 | -0.11% +/- 0.43 | 68.48% |
+| displacement_penalty=0.1, velocity_penalty=0.0 | +0.28% +/- 0.27 | +0.21% +/- 0.24 | 68.79% |
+| displacement_penalty=0.1, velocity_penalty=0.1 | +0.28% +/- 0.27 | -0.00% +/- 0.24 | 68.58% |
+| displacement_penalty=0.03, velocity_penalty=0.1 | +0.25% +/- 0.30 | +0.16% +/- 0.19 | 68.74% |
 
 ### fm_cls_rolled on flowers102
 
-| Configuration | Val delta (selection) | Test delta | Test accuracy | Best epochs | Displacement |
-|---|---|---|---|---|---|
-| displacement_penalty=0.1, velocity_penalty=0.1 | +1.14% +/- 0.34 | +0.93% +/- 0.08 | 84.15% | [24, 40, 178] | 1.26 |
-| displacement_penalty=0.03, velocity_penalty=0.1 | +1.05% +/- 0.32 | +0.99% +/- 0.17 | 84.20% | [136, 47, 58] | 1.33 |
-| displacement_penalty=0.0, velocity_penalty=0.1 | +1.01% +/- 0.37 | +0.99% +/- 0.15 | 84.20% | [118, 47, 194] | 1.36 |
-| displacement_penalty=0.1, velocity_penalty=0.0 | +0.95% +/- 0.41 | +1.08% +/- 0.25 | 84.30% | [109, 47, 66] | 1.43 |
-| displacement_penalty=0.3, velocity_penalty=0.1 | +0.95% +/- 0.15 | +0.91% +/- 0.06 | 84.13% | [109, 23, 165] | 1.04 |
+| Configuration | Val delta (selection) | Test delta | Test accuracy |
+|---|---|---|---|
+| displacement_penalty=0.1, velocity_penalty=0.1 | +1.14% +/- 0.34 | +0.93% +/- 0.08 | 84.15% |
+| displacement_penalty=0.03, velocity_penalty=0.1 | +1.05% +/- 0.32 | +0.99% +/- 0.17 | 84.20% |
+| displacement_penalty=0.0, velocity_penalty=0.1 | +1.01% +/- 0.37 | +0.99% +/- 0.15 | 84.20% |
+| displacement_penalty=0.1, velocity_penalty=0.0 | +0.95% +/- 0.41 | +1.08% +/- 0.25 | 84.30% |
+| displacement_penalty=0.3, velocity_penalty=0.1 | +0.95% +/- 0.15 | +0.91% +/- 0.06 | 84.13% |
 
 ## Ablation: does recomputing the targets earn its keep?
 

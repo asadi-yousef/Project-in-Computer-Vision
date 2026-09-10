@@ -302,3 +302,27 @@ def test_search_setting_runs_a_small_grid_on_real_data():
     # Sorted best-first by the selection statistic.
     assert summaries[0].mean_val_delta >= summaries[1].mean_val_delta
     assert select_best(summaries) is summaries[0] or summaries[0].mean_val_delta == summaries[1].mean_val_delta
+
+
+def test_the_search_table_omits_epochs_and_displacement():
+    summaries = [_summary(val_delta=0.02, displacement=12.58, target_step_size=0.05)]
+
+    lines = format_tuning_table(summaries).splitlines()
+
+    assert lines[0] == (
+        "| Configuration | Val delta (selection) | Test delta | Test accuracy |"
+    )
+    assert "12.58" not in lines[2]
+    assert "[10, 10, 10]" not in lines[2]
+
+
+def test_displacement_still_breaks_ties_after_leaving_the_table():
+    # Taking the column out of the rendered table must not take the number
+    # out of the data selection depends on.
+    summaries = [
+        _summary(val_delta=0.02, displacement=50.0, target_step_size=0.2),
+        _summary(val_delta=0.02, displacement=2.0, target_step_size=0.05),
+    ]
+
+    assert select_best(summaries).overrides == {"target_step_size": 0.05}
+
