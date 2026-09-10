@@ -432,21 +432,33 @@ def test_a_missing_tuning_file_contributes_nothing(tmp_path):
     assert _tuning_tables(tmp_path / "absent.json") == []
 
 
-def test_the_tuning_section_renders_when_the_file_exists():
+def test_the_tuning_section_explains_itself_and_shows_the_choices():
     tuning_path = REAL_REPORTS / "stage3_tuning.json"
     if not tuning_path.exists():
         pytest.skip("no tuning results")
 
-    lines = _tuning_tables(tuning_path, top_n=3)
-    text = "\n".join(lines)
+    text = "\n".join(_tuning_tables(tuning_path))
 
     assert "## Hyperparameter search" in text
-    assert "never used for ranking" in text
-    assert "### fm_cls_guided on dtd" in text
+    assert "**How it works.**" in text
+    assert "never used to choose" in text
+    # The grid that was searched, and what it selected.
+    assert "| Strategy | Setting | Values tried |" in text
+    assert "| Strategy | Dataset | Selected | Val delta | Test delta |" in text
+    assert "0.02, 0.05, 0.1, 0.2" in text
 
 
+def test_the_tuning_section_selects_what_the_config_records():
+    # The report's "Selected" column must name the settings every Stage 3
+    # number was actually produced with.
+    tuning_path = REAL_REPORTS / "stage3_tuning.json"
+    if not tuning_path.exists():
+        pytest.skip("no tuning results")
 
-# --- The optional extension's reporting ---
+    text = "\n".join(_tuning_tables(tuning_path))
+
+    assert "displacement penalty 0.03, velocity penalty 0" in text   # dtd, Strategy 1
+    assert "recompute every 20 epochs" in text                         # flowers, Strategy 2
 
 
 def _extension_summaries(joint_delta=0.008, rolled_delta=0.002, control_delta=0.003,
@@ -622,13 +634,13 @@ def test_the_ablation_reports_the_cost_of_switching_step_6_off(tmp_path):
     text = "\n".join(format_refresh_ablation_section(path, max_epochs=200))
 
     assert "## Ablation" in text
-    assert "never refreshed" in text
-    # Best validation is refresh=1 (test +1.00); never-refreshed is +0.10.
+    assert "**How it works.**" in text
+    # DTD's selected interval is 1 (test +1.00); never refreshed is +0.10.
     assert "dtd +1.00 -> +0.10" in text
-    assert "ablation, not a selection" in text
+    assert "did not change the selected settings" in text
 
 
-def test_the_ablation_names_the_best_interval_it_measured(tmp_path):
+def test_the_ablation_marks_the_selected_interval(tmp_path):
     path = tmp_path / "ablation.json"
     _write_ablation(path, [
         (1, 0.004, 0.001, 12.6),
@@ -636,19 +648,25 @@ def test_the_ablation_names_the_best_interval_it_measured(tmp_path):
         (200, 0.011, 0.008, 1.0),
     ])
 
-    text = "\n".join(format_refresh_ablation_section(path, max_epochs=200))
+    rows = [
+        line for line in format_refresh_ablation_section(path, max_epochs=200)[3].splitlines()
+        if line.startswith("| 1 epoch") or line.startswith("| 20 epochs")
+    ]
 
-    assert "dtd every 20" in text
+    # DTD's selected interval is 1 epoch, whatever the ablation found.
+    assert "(selected)" in rows[0]
+    assert "(selected)" not in rows[1]
 
 
 def test_the_ablation_labels_the_never_refreshed_row(tmp_path):
     path = tmp_path / "ablation.json"
-    _write_ablation(path, [(5, 0.01, 0.005, 3.0), (200, 0.004, 0.001, 0.6)])
+    _write_ablation(path, [(1, 0.01, 0.005, 3.0), (5, 0.01, 0.005, 3.0), (200, 0.004, 0.001, 0.6)])
 
     text = "\n".join(format_refresh_ablation_section(path, max_epochs=200))
 
-    assert "| 5 epoch(s) |" in text
-    assert "| 200 epochs (never refreshed) |" in text
+    assert "| 1 epoch |" in text
+    assert "| 5 epochs |" in text
+    assert "| 200 epochs (never) |" in text
 
 
 def test_the_real_ablation_covers_the_searched_range_and_beyond():

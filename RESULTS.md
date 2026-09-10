@@ -360,81 +360,44 @@ The feature-space figures below are two-dimensional projections; this table meas
 
 ## Hyperparameter search
 
-part_3.pdf asks that changes to the suggested strategies be "clearly described and justified experimentally". The searched knobs are the ones the spec names for each strategy; the velocity-network architecture, the optimizer, the epoch budget and T were held fixed, so the two strategies stay comparable. Configurations were ranked on mean validation delta across seeds, with test accuracy computed but never used for ranking. The top 5 of each search are shown; the full results are in `reports/stage3_tuning.json`.
+part_3.pdf leaves several settings of each strategy open and asks that changes be justified experimentally, so they were chosen by a grid search.
 
-### fm_cls_guided on dtd
+**How it works.** Every combination of the values below - 10 for Strategy 1, 24 for Strategy 2 - was trained on each dataset with all 3 seeds, 204 runs in total. Everything else was held fixed. Each combination was scored by its **validation delta** - validation accuracy minus the untrained pipeline's, averaged over the seeds - and the highest score was selected. Test accuracy was recorded but never used to choose.
 
-| Configuration | Val delta (selection) | Test delta | Test accuracy |
-|---|---|---|---|
-| target_num_steps=1, target_refresh_epochs=1, target_step_size=0.02 | +1.61% +/- 0.48 | +1.05% +/- 0.87 | 69.63% |
-| target_num_steps=1, target_refresh_epochs=20, target_step_size=0.2 | +1.60% +/- 0.51 | +0.96% +/- 0.67 | 69.54% |
-| target_num_steps=3, target_refresh_epochs=1, target_step_size=0.05 | +1.58% +/- 0.40 | +0.48% +/- 0.65 | 69.06% |
-| target_num_steps=3, target_refresh_epochs=1, target_step_size=0.02 | +1.52% +/- 0.21 | +0.80% +/- 0.59 | 69.38% |
-| target_num_steps=1, target_refresh_epochs=1, target_step_size=0.05 | +1.49% +/- 0.14 | +0.99% +/- 0.16 | 69.57% |
+| Strategy | Setting | Values tried |
+|---|---|---|
+| Strategy 1: end-to-end rolled-out (fm_cls_rolled) | displacement penalty | 0, 0.03, 0.1, 0.3, 1 |
+|  | velocity penalty | 0, 0.1 |
+| Strategy 2: classifier-guided FM (fm_cls_guided) | step size | 0.02, 0.05, 0.1, 0.2 |
+|  | target steps | 1, 3 |
+|  | recompute targets every (epochs) | 1, 5, 20 |
 
-### fm_cls_guided on flowers102
+**Selected values** - these are the settings behind every Stage 3 number in this report:
 
-| Configuration | Val delta (selection) | Test delta | Test accuracy |
-|---|---|---|---|
-| target_num_steps=3, target_refresh_epochs=20, target_step_size=0.02 | +1.90% +/- 0.57 | +1.02% +/- 0.34 | 84.24% |
-| target_num_steps=1, target_refresh_epochs=20, target_step_size=0.1 | +1.86% +/- 0.35 | +1.01% +/- 0.67 | 84.23% |
-| target_num_steps=1, target_refresh_epochs=20, target_step_size=0.05 | +1.83% +/- 0.37 | +0.86% +/- 0.55 | 84.07% |
-| target_num_steps=3, target_refresh_epochs=5, target_step_size=0.02 | +1.80% +/- 0.23 | +0.82% +/- 0.39 | 84.04% |
-| target_num_steps=3, target_refresh_epochs=5, target_step_size=0.05 | +1.76% +/- 0.39 | +0.16% +/- 0.46 | 83.37% |
+| Strategy | Dataset | Selected | Val delta | Test delta |
+|---|---|---|---|---|
+| Strategy 1: end-to-end rolled-out (fm_cls_rolled) | dtd | displacement penalty 0.03, velocity penalty 0 | +0.44% | +0.20% |
+| Strategy 1: end-to-end rolled-out (fm_cls_rolled) | flowers102 | displacement penalty 0.1, velocity penalty 0.1 | +1.14% | +0.93% |
+| Strategy 2: classifier-guided FM (fm_cls_guided) | dtd | step size 0.02, target steps 1, recompute every 1 epoch | +1.61% | +1.05% |
+| Strategy 2: classifier-guided FM (fm_cls_guided) | flowers102 | step size 0.02, target steps 3, recompute every 20 epochs | +1.90% | +1.02% |
 
-### fm_cls_rolled on dtd
+Scores for all 68 combinations are in `reports/stage3_tuning.json`.
 
-| Configuration | Val delta (selection) | Test delta | Test accuracy |
-|---|---|---|---|
-| displacement_penalty=0.03, velocity_penalty=0.0 | +0.44% +/- 0.31 | +0.20% +/- 0.19 | 68.78% |
-| displacement_penalty=0.0, velocity_penalty=0.1 | +0.34% +/- 0.22 | -0.11% +/- 0.43 | 68.48% |
-| displacement_penalty=0.1, velocity_penalty=0.0 | +0.28% +/- 0.27 | +0.21% +/- 0.24 | 68.79% |
-| displacement_penalty=0.1, velocity_penalty=0.1 | +0.28% +/- 0.27 | -0.00% +/- 0.24 | 68.58% |
-| displacement_penalty=0.03, velocity_penalty=0.1 | +0.25% +/- 0.30 | +0.16% +/- 0.19 | 68.74% |
+## Ablation: is recomputing the targets necessary?
 
-### fm_cls_rolled on flowers102
+Strategy 2 recomputes its targets during training, as part_3.pdf's step 6 asks. This checks whether that is needed.
 
-| Configuration | Val delta (selection) | Test delta | Test accuracy |
-|---|---|---|---|
-| displacement_penalty=0.1, velocity_penalty=0.1 | +1.14% +/- 0.34 | +0.93% +/- 0.08 | 84.15% |
-| displacement_penalty=0.03, velocity_penalty=0.1 | +1.05% +/- 0.32 | +0.99% +/- 0.17 | 84.20% |
-| displacement_penalty=0.0, velocity_penalty=0.1 | +1.01% +/- 0.37 | +0.99% +/- 0.15 | 84.20% |
-| displacement_penalty=0.1, velocity_penalty=0.0 | +0.95% +/- 0.41 | +1.08% +/- 0.25 | 84.30% |
-| displacement_penalty=0.3, velocity_penalty=0.1 | +0.95% +/- 0.15 | +0.91% +/- 0.06 | 84.13% |
+**How it works.** Strategy 2 was retrained changing only how often the targets are recomputed, with every other setting at the selected values and 3 seeds per interval. At 200 epochs - the full training length - the targets are built once and never recomputed. This is a check only; it did not change the selected settings.
 
-## Ablation: does recomputing the targets earn its keep?
+| Recompute targets every | dtd test delta | flowers102 test delta |
+|---|---|---|
+| 1 epoch | +1.05% +/- 0.87 (selected) | -0.09% +/- 0.82 |
+| 5 epochs | +0.73% +/- 0.41 | +0.82% +/- 0.39 |
+| 20 epochs | +0.55% +/- 0.49 | +1.02% +/- 0.34 (selected) |
+| 50 epochs | +0.16% +/- 0.05 | +0.78% +/- 0.49 |
+| 200 epochs (never) | +0.11% +/- 0.16 | +0.83% +/- 0.14 |
 
-part_3.pdf's step 6 asks that the classifier-guided targets be recomputed as the flow changes during training. The search established that recomputing *less* often works better, but its grid stopped at every 20 epochs, so it could not say whether recomputing at all is necessary. Here the refresh interval is varied alone, holding each dataset's selected step size and target-step count fixed. At 200 the targets are built once and never recomputed - step 6 switched off.
-
-This is an **ablation, not a selection**: the reported configuration is still the one the documented search chose, and these numbers did not influence it.
-
-### dtd
-
-| Refresh every | Val delta | Test delta | Mean displacement |
-|---|---|---|---|
-| 1 epoch(s) | +1.61% +/- 0.48 | +1.05% +/- 0.87 | 12.58 |
-| 5 epoch(s) | +1.47% +/- 0.21 | +0.73% +/- 0.41 | 7.31 |
-| 20 epoch(s) | +1.24% +/- 0.16 | +0.55% +/- 0.49 | 4.41 |
-| 50 epoch(s) | +0.71% +/- 0.11 | +0.16% +/- 0.05 | 1.90 |
-| 200 epochs (never refreshed) | +0.37% +/- 0.14 | +0.11% +/- 0.16 | 0.60 |
-
-### flowers102
-
-| Refresh every | Val delta | Test delta | Mean displacement |
-|---|---|---|---|
-| 1 epoch(s) | +1.31% +/- 0.37 | -0.09% +/- 0.82 | 8.97 |
-| 5 epoch(s) | +1.80% +/- 0.23 | +0.82% +/- 0.39 | 3.10 |
-| 20 epoch(s) | +1.90% +/- 0.57 | +1.02% +/- 0.34 | 2.77 |
-| 50 epoch(s) | +1.80% +/- 0.67 | +0.78% +/- 0.49 | 2.13 |
-| 200 epochs (never refreshed) | +1.11% +/- 0.37 | +0.83% +/- 0.14 | 0.97 |
-
-**Switching step 6 off costs dtd +1.05 -> +0.11, flowers102 +1.02 -> +0.83 points.** So the recompute is doing most of the work on one dataset and comparatively little on the other - it is load-bearing rather than decorative, but not equally so everywhere.
-
-**The best interval differs by dataset (dtd every 1, flowers102 every 20), and refreshing every epoch actively hurts Flowers-102** (test -0.09, the only negative result in the sweep) while being the best setting tried on DTD. Refresh frequency is not a knob with a single right answer across settings.
-
-**Displacement falls monotonically as refreshing slows, in both datasets.** That is the compounding effect measured directly: each recompute rebuilds the target from the current transported feature, so more frequent recomputation ratchets the target further from the original.
-
-**This retires half the grid-boundary caveat.** Flowers-102's selected interval of 20 was the largest the search tried, so it could have been a truncation artifact; extending to 50 and 200 shows it is a genuine interior optimum. The step-size boundary is still untested.
+**Result.** Turning the recompute off changes the test delta by dtd +1.05 -> +0.11, flowers102 +1.02 -> +0.83 points: on DTD it does almost all of the work, on Flowers-102 little.
 
 ## Stage 3: training curves (10-shot, seed 0)
 

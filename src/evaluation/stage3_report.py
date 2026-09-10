@@ -22,18 +22,25 @@ from src.classifiers.frozen_probe import load_frozen_linear_probe
 from src.data.datasets import get_class_names, load_dataset_splits
 from src.evaluation.aggregation import STAGE3_EXTENSION_COMPARISON_METHODS
 from src.evaluation.tables import (
+    STAGE3_METHOD_LABELS,
     format_stage3_comparison_table,
     format_stage3_diagnostics_table,
 )
 from src.features.loading import load_validated_feature_cache
 from src.flow_matching.inference import transport_with_checkpoint
 from src.flow_matching.stage3_runner import stage3_run_dir
-from src.flow_matching.stage3_tuning import format_tuning_table, load_tuning_results
+from src.flow_matching.stage3_tuning import (
+    STRATEGY_GRIDS,
+    build_grid,
+    load_tuning_results,
+    select_best,
+)
 from src.utils.config import (
     STAGE3_EXTENSION_METHODS,
     STAGE3_K_SHOT,
     STAGE3_METHODS,
     STAGE3_SEEDS,
+    STAGE3_SELECTED_HYPERPARAMS,
     load_config,
     stage3_hyperparams_for,
 )
@@ -600,36 +607,6 @@ def format_stage3_observations(
         "it rather than establish it.\n",
     ]
 
-
-def _tuning_tables(tuning_path: Union[str, Path], top_n: int = 5) -> List[str]:
-    """Render the hyperparameter search, best-first, per method and dataset."""
-    tuning_path = Path(tuning_path)
-    if not tuning_path.exists():
-        return []
-
-    summaries = load_tuning_results(tuning_path)
-    grouped: Dict[Tuple[str, str], list] = {}
-    for summary in summaries:
-        grouped.setdefault((summary.method, summary.dataset), []).append(summary)
-
-    lines = [
-        "## Hyperparameter search\n",
-        "part_3.pdf asks that changes to the suggested strategies be "
-        '"clearly described and justified experimentally". The searched knobs are '
-        "the ones the spec names for each strategy; the velocity-network "
-        "architecture, the optimizer, the epoch budget and T were held fixed, so "
-        "the two strategies stay comparable. Configurations were ranked on mean "
-        "validation delta across seeds, with test accuracy computed but never used "
-        f"for ranking. The top {top_n} of each search are shown; the full results "
-        "are in `reports/stage3_tuning.json`.\n",
-    ]
-    for (method, dataset), group in sorted(grouped.items()):
-        ordered = sorted(group, key=lambda summary: summary.mean_val_delta, reverse=True)
-        lines.append(f"### {method} on {dataset}\n")
-        lines.append(format_tuning_table(ordered, top_n=top_n) + "\n")
-    return lines
-
-
 def format_stage3_section(
     summaries: List[dict],
     stage3_summaries: List[dict],
@@ -926,19 +903,108 @@ def format_stage3_extension_section(
     return lines
 
 
+# How the searched knobs are named in the report. Plain words rather than the
+# config field names, so the tables read without the code open alongside.
+KNOB_LABELS = {
+    "displacement_penalty": "displacement penalty",
+    "velocity_penalty": "velocity penalty",
+    "target_step_size": "step size",
+    "target_num_steps": "target steps",
+    "target_refresh_epochs": "recompute targets every (epochs)",
+}
+
+
+def _knob_values(overrides: Dict[str, float]) -> str:
+    """A configuration as `name value, name value`, in the grid's key order."""
+
+    def one(key: str, value: float) -> str:
+        if key == "target_refresh_epochs":
+            return f"recompute every {value:g} epoch" + ("" if value == 1 else "s")
+        return f"{KNOB_LABELS.get(key, key)} {value:g}"
+
+    return ", ".join(one(key, value) for key, value in overrides.items())
+
+
+def _tuning_tables(tuning_path: Union[str, Path]) -> List[str]:
+    """The hyperparameter search: what was tried, how it was ranked, what won.
+
+    Kept to two short tables - the grid and the selections - rather than the
+    ranked list of every configuration, which lives in
+    reports/stage3_tuning.json for anyone who wants it. Everything shown is
+    read from the saved results and from `STRATEGY_GRIDS`, so it cannot drift
+    from what was actually run.
+    """
+    tuning_path = Path(tuning_path)
+    if not tuning_path.exists():
+        return []
+
+    summaries = load_tuning_results(tuning_path)
+    if not summaries:
+        return []
+
+    grouped: Dict[Tuple[str, str], list] = {}
+    for summary in summaries:
+        grouped.setdefault((summary.method, summary.dataset), []).append(summary)
+
+    num_seeds = summaries[0].num_seeds
+    datasets = sorted({summary.dataset for summary in summaries})
+    counts = {method: len(build_grid(method)) for method in STRATEGY_GRIDS}
+    total_runs = sum(counts.values()) * num_seeds * len(datasets)
+
+    grid_rows = ["| Strategy | Setting | Values tried |", "|---|---|---|"]
+    for method in STAGE3_METHODS:
+        strategy = STAGE3_METHOD_LABELS.get(method, method)
+        for index, (knob, values) in enumerate(STRATEGY_GRIDS[method].items()):
+            grid_rows.append(
+                f"| {strategy if index == 0 else ''} | {KNOB_LABELS.get(knob, knob)} "
+                f"| {', '.join(f'{value:g}' for value in values)} |"
+            )
+
+    chosen_rows = [
+        "| Strategy | Dataset | Selected | Val delta | Test delta |",
+        "|---|---|---|---|---|",
+    ]
+    for method in STAGE3_METHODS:
+        for dataset in datasets:
+            group = grouped.get((method, dataset))
+            if not group:
+                continue
+            best = select_best(group)
+            chosen_rows.append(
+                f"| {STAGE3_METHOD_LABELS.get(method, method)} | {dataset} "
+                f"| {_knob_values(best.overrides)} "
+                f"| {best.mean_val_delta * 100:+.2f}% | {best.mean_test_delta * 100:+.2f}% |"
+            )
+
+    return [
+        "## Hyperparameter search\n",
+        "part_3.pdf leaves several settings of each strategy open and asks that "
+        "changes be justified experimentally, so they were chosen by a grid "
+        "search.\n",
+        f"**How it works.** Every combination of the values below - "
+        f"{counts['fm_cls_rolled']} for Strategy 1, {counts['fm_cls_guided']} for "
+        f"Strategy 2 - was trained on each dataset with all {num_seeds} seeds, "
+        f"{total_runs} runs in total. Everything else was held fixed. Each "
+        "combination was scored by its **validation delta** - validation accuracy "
+        "minus the untrained pipeline's, averaged over the seeds - and the "
+        "highest score was selected. Test accuracy was recorded but never used to "
+        "choose.\n",
+        "\n".join(grid_rows) + "\n",
+        "**Selected values** - these are the settings behind every Stage 3 number "
+        "in this report:\n",
+        "\n".join(chosen_rows) + "\n",
+        "Scores for all "
+        f"{len(summaries)} combinations are in `reports/stage3_tuning.json`.\n",
+    ]
+
+
 def format_refresh_ablation_section(
     ablation_path: Union[str, Path], max_epochs: int = 200
 ) -> List[str]:
-    """Report the target-recompute ablation.
+    """Is Strategy 2's target recompute (part_3.pdf's step 6) necessary?
 
-    part_3.pdf's step 6 asks that the classifier-guided targets be recomputed
-    as the flow changes. The search showed slower recomputation works better
-    but stopped at every 20 epochs, so it could not say whether recomputing
-    at all is necessary. This reads back a sweep of the refresh interval
-    alone, extended to `max_epochs` - at which the targets are built once and
-    never refreshed, i.e. step 6 switched off.
-
-    Returns an empty list when the ablation has not been run.
+    One table and one sentence of result. Returns an empty list when the
+    ablation has not been run.
     """
     ablation_path = Path(ablation_path)
     if not ablation_path.exists():
@@ -948,89 +1014,61 @@ def format_refresh_ablation_section(
     if not summaries:
         return []
 
-    by_dataset: Dict[str, list] = {}
-    for summary in summaries:
-        by_dataset.setdefault(summary.dataset, []).append(summary)
-
     def interval(summary) -> int:
         return summary.overrides["target_refresh_epochs"]
 
-    lines = [
-        "## Ablation: does recomputing the targets earn its keep?\n",
-        "part_3.pdf's step 6 asks that the classifier-guided targets be "
-        "recomputed as the flow changes during training. The search established "
-        "that recomputing *less* often works better, but its grid stopped at "
-        "every 20 epochs, so it could not say whether recomputing at all is "
-        "necessary. Here the refresh interval is varied alone, holding each "
-        f"dataset's selected step size and target-step count fixed. At {max_epochs} "
-        "the targets are built once and never recomputed - step 6 switched off.\n",
-        "This is an **ablation, not a selection**: the reported configuration is "
-        "still the one the documented search chose, and these numbers did not "
-        "influence it.\n",
-    ]
-
-    for dataset in sorted(by_dataset):
-        rows = sorted(by_dataset[dataset], key=interval)
-        lines.append(f"### {dataset}\n")
-        lines.append(
-            "| Refresh every | Val delta | Test delta | Mean displacement |\n"
-            + "|---" * 4
-            + "|\n"
-            + "\n".join(
-                f"| {interval(row)}"
-                f"{' epochs (never refreshed)' if interval(row) >= max_epochs else ' epoch(s)'} "
-                f"| {row.mean_val_delta * 100:+.2f}% +/- {(row.std_val_delta or 0) * 100:.2f} "
-                f"| {row.mean_test_delta * 100:+.2f}% +/- {(row.std_test_delta or 0) * 100:.2f} "
-                f"| {row.mean_displacement:.2f} |"
-                for row in rows
-            )
-            + "\n"
-        )
-
-    # Derived so the reading cannot drift from the table.
-    verdicts = []
-    for dataset in sorted(by_dataset):
-        rows = sorted(by_dataset[dataset], key=interval)
-        best = max(rows, key=lambda row: row.mean_val_delta)
-        never = rows[-1]
-        verdicts.append(
-            {
-                "dataset": dataset,
-                "best_interval": interval(best),
-                "best_test": best.mean_test_delta,
-                "never_test": never.mean_test_delta,
-                "cost": best.mean_test_delta - never.mean_test_delta,
-            }
-        )
-
-    cost_summary = ", ".join(
-        f"{v['dataset']} {v['best_test'] * 100:+.2f} -> {v['never_test'] * 100:+.2f}"
-        for v in verdicts
-    )
-    interval_summary = ", ".join(
-        f"{v['dataset']} every {v['best_interval']}" for v in verdicts
-    )
-
-    lines.extend(
-        [
-            f"**Switching step 6 off costs {cost_summary} points.** So the "
-            "recompute is doing most of the work on one dataset and comparatively "
-            "little on the other - it is load-bearing rather than decorative, but "
-            "not equally so everywhere.\n",
-            f"**The best interval differs by dataset ({interval_summary}), and "
-            "refreshing every epoch actively hurts Flowers-102** (test -0.09, the "
-            "only negative result in the sweep) while being the best setting tried "
-            "on DTD. Refresh frequency is not a knob with a single right answer "
-            "across settings.\n",
-            "**Displacement falls monotonically as refreshing slows, in both "
-            "datasets.** That is the compounding effect measured directly: each "
-            "recompute rebuilds the target from the current transported feature, "
-            "so more frequent recomputation ratchets the target further from the "
-            "original.\n",
-            "**This retires half the grid-boundary caveat.** Flowers-102's "
-            "selected interval of 20 was the largest the search tried, so it could "
-            "have been a truncation artifact; extending to 50 and 200 shows it is a "
-            "genuine interior optimum. The step-size boundary is still untested.\n",
+    datasets = sorted({summary.dataset for summary in summaries})
+    lookup = {(summary.dataset, interval(summary)): summary for summary in summaries}
+    intervals = sorted({interval(summary) for summary in summaries})
+    selected = {
+        dataset: STAGE3_SELECTED_HYPERPARAMS[("fm_cls_guided", dataset)][
+            "target_refresh_epochs"
         ]
+        for dataset in datasets
+    }
+    num_seeds = summaries[0].num_seeds
+
+    rows = [
+        "| Recompute targets every | " + " | ".join(f"{d} test delta" for d in datasets) + " |",
+        "|---" * (len(datasets) + 1) + "|",
+    ]
+    for value in intervals:
+        label = f"{value} epochs (never)" if value >= max_epochs else f"{value} epoch" + (
+            "" if value == 1 else "s"
+        )
+        cells = []
+        for dataset in datasets:
+            summary = lookup.get((dataset, value))
+            if summary is None:
+                cells.append("n/a")
+                continue
+            cell = (
+                f"{summary.mean_test_delta * 100:+.2f}% "
+                f"+/- {(summary.std_test_delta or 0) * 100:.2f}"
+            )
+            if value == selected[dataset]:
+                cell += " (selected)"
+            cells.append(cell)
+        rows.append(f"| {label} | " + " | ".join(cells) + " |")
+
+    never = intervals[-1]
+    cost = ", ".join(
+        f"{dataset} {lookup[(dataset, selected[dataset])].mean_test_delta * 100:+.2f} "
+        f"-> {lookup[(dataset, never)].mean_test_delta * 100:+.2f}"
+        for dataset in datasets
+        if (dataset, selected[dataset]) in lookup and (dataset, never) in lookup
     )
-    return lines
+
+    return [
+        "## Ablation: is recomputing the targets necessary?\n",
+        "Strategy 2 recomputes its targets during training, as part_3.pdf's step 6 "
+        "asks. This checks whether that is needed.\n",
+        f"**How it works.** Strategy 2 was retrained changing only how often the "
+        f"targets are recomputed, with every other setting at the selected values "
+        f"and {num_seeds} seeds per interval. At {max_epochs} epochs - the full "
+        "training length - the targets are built once and never recomputed. This "
+        "is a check only; it did not change the selected settings.\n",
+        "\n".join(rows) + "\n",
+        f"**Result.** Turning the recompute off changes the test delta by {cost} "
+        "points: on DTD it does almost all of the work, on Flowers-102 little.\n",
+    ]
